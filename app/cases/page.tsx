@@ -200,6 +200,38 @@ export default function CasesPage() {
           </div>
         </div>
 
+        <div className="grid md:grid-cols-2 gap-6 mt-8">
+          <a
+            href="/add-case"
+            className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:border-cyan-300 transition-colors"
+          >
+            <p className="text-cyan-600 font-semibold mb-2">New Case</p>
+
+            <h3 className="text-lg font-bold text-slate-900 mb-1">
+              Record a Surgical Case
+            </h3>
+
+            <p className="text-slate-500">
+              Add a new navigation or robotic-assisted procedure.
+            </p>
+          </a>
+
+          <a
+            href="/"
+            className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:border-cyan-300 transition-colors"
+          >
+            <p className="text-cyan-600 font-semibold mb-2">Dashboard</p>
+
+            <h3 className="text-lg font-bold text-slate-900 mb-1">
+              Return to Overview
+            </h3>
+
+            <p className="text-slate-500">
+              Review case totals, recent procedures, and overall activity.
+            </p>
+          </a>
+        </div>
+
         <footer className="text-xs text-slate-400 mt-8 pb-6">
           SNCT • For educational and simulation use only • Not for clinical
           decision-making
