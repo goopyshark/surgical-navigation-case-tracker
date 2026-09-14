@@ -1,3 +1,5 @@
+import DeleteCaseButton from "../../components/DeleteCaseButton";
+
 type CaseDetailsPageProps = {
   params: Promise<{
     id: string;
@@ -116,9 +118,7 @@ export default async function CaseDetailsPage({
               Edit Case
             </a>
 
-            <button className="border border-red-300 text-red-600 bg-white px-5 py-3 rounded-lg font-medium">
-              Delete
-            </button>
+            <DeleteCaseButton caseName={surgicalCase.name} />
           </div>
         </div>
 

@@ -1,3 +1,5 @@
+import DeleteCaseButton from "../components/DeleteCaseButton";
+
 const cases = [
   {
     id: "SNC-2026-024",
@@ -188,9 +190,7 @@ export default function CasesPage() {
                           Edit
                         </a>
 
-                        <button className="border border-red-300 text-red-600 px-3 py-2 rounded-lg">
-                          Delete
-                        </button>
+                        <DeleteCaseButton caseName={item.name} />
                       </div>
                     </td>
                   </tr>
