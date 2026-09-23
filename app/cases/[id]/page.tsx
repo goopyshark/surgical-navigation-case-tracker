@@ -1,4 +1,5 @@
 import DeleteCaseButton from "../../components/DeleteCaseButton";
+import Navbar from "../../components/Navbar";
 
 type CaseDetailsPageProps = {
   params: Promise<{
@@ -67,32 +68,10 @@ export default async function CaseDetailsPage({
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
-      <nav className="bg-slate-950 text-white px-6 md:px-8 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="bg-cyan-500 rounded-xl w-10 h-10 flex items-center justify-center font-bold">
-            +
-          </div>
-          <span className="text-2xl font-bold">SNCT</span>
-        </div>
+      <Navbar />
 
-        <div className="hidden md:flex items-center gap-8 text-sm">
-          <a href="/" className="hover:text-cyan-400">
-            Dashboard
-          </a>
-          <a href="/cases" className="bg-cyan-500 px-5 py-2 rounded-lg">
-            Cases
-          </a>
-          <a href="/add-case" className="hover:text-cyan-400">
-            Add Case
-          </a>
-          <a href="/about" className="hover:text-cyan-400">
-            About
-          </a>
-          <span className="text-slate-400">Logout</span>
-        </div>
-      </nav>
-
-      <section className="max-w-5xl mx-auto px-6 py-8">
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        {/* Back Link */}
         <a
           href="/cases"
           className="text-cyan-700 font-medium hover:underline"
@@ -100,20 +79,22 @@ export default async function CaseDetailsPage({
           ← Back to Cases
         </a>
 
-        <div className="mt-5 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        {/* Case Header */}
+        <div className="mt-5 flex flex-col md:flex-row md:items-start md:justify-between gap-5">
           <div>
-            <h1 className="text-4xl font-bold border-l-4 border-cyan-500 pl-4">
+            <h1 className="text-3xl md:text-4xl font-bold border-l-4 border-cyan-500 pl-4">
               {surgicalCase.name}
             </h1>
+
             <p className="text-slate-500 mt-3">
               Case ID: {surgicalCase.id}
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <a
               href={`/cases/${surgicalCase.id}/edit`}
-              className="border border-slate-300 bg-white px-5 py-3 rounded-lg font-medium"
+              className="border border-slate-300 bg-white hover:bg-slate-50 px-5 py-3 rounded-lg font-medium text-center"
             >
               Edit Case
             </a>
@@ -122,28 +103,59 @@ export default async function CaseDetailsPage({
           </div>
         </div>
 
+        {/* Case Information */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <section className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-bold mb-5">Procedure Information</h2>
+          <section className="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
+            <h2 className="text-xl font-bold mb-5">
+              Procedure Information
+            </h2>
 
-            <DetailRow label="Procedure" value={surgicalCase.procedure} />
-            <DetailRow label="Region" value={surgicalCase.region} />
-            <DetailRow label="Case Date" value={surgicalCase.date} />
-            <DetailRow label="Duration" value={surgicalCase.duration} />
-            <DetailRow label="Status" value={surgicalCase.status} />
+            <DetailRow
+              label="Procedure"
+              value={surgicalCase.procedure}
+            />
+
+            <DetailRow
+              label="Region"
+              value={surgicalCase.region}
+            />
+
+            <DetailRow
+              label="Case Date"
+              value={surgicalCase.date}
+            />
+
+            <DetailRow
+              label="Duration"
+              value={surgicalCase.duration}
+            />
+
+            <DetailRow
+              label="Status"
+              value={surgicalCase.status}
+            />
           </section>
 
-          <section className="bg-white rounded-2xl shadow-sm p-6">
+          <section className="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
             <h2 className="text-xl font-bold mb-5">
               Navigation / Robotics Information
             </h2>
 
-            <DetailRow label="Technology Type" value={surgicalCase.type} />
-            <DetailRow label="System Name" value={surgicalCase.systemName} />
+            <DetailRow
+              label="Technology Type"
+              value={surgicalCase.type}
+            />
+
+            <DetailRow
+              label="System Name"
+              value={surgicalCase.systemName}
+            />
+
             <DetailRow
               label="Registration Method"
               value={surgicalCase.registrationMethod}
             />
+
             <DetailRow
               label="Navigation Accuracy"
               value={surgicalCase.accuracy}
@@ -151,16 +163,26 @@ export default async function CaseDetailsPage({
           </section>
         </div>
 
-        <section className="mt-6 bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="text-xl font-bold mb-3">Technical Issues</h2>
+        {/* Technical Issues */}
+        <section className="mt-6 bg-white rounded-2xl shadow-sm p-5 sm:p-6">
+          <h2 className="text-xl font-bold mb-3">
+            Technical Issues
+          </h2>
+
           <p className="text-slate-600 leading-7">
             {surgicalCase.technicalIssues}
           </p>
         </section>
 
-        <section className="mt-6 bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="text-xl font-bold mb-3">Notes</h2>
-          <p className="text-slate-600 leading-7">{surgicalCase.notes}</p>
+        {/* Notes */}
+        <section className="mt-6 bg-white rounded-2xl shadow-sm p-5 sm:p-6">
+          <h2 className="text-xl font-bold mb-3">
+            Notes
+          </h2>
+
+          <p className="text-slate-600 leading-7">
+            {surgicalCase.notes}
+          </p>
         </section>
 
         <footer className="text-xs text-slate-400 mt-8 pb-6">
@@ -181,8 +203,13 @@ function DetailRow({
 }) {
   return (
     <div className="py-3 border-b border-slate-100 last:border-b-0">
-      <div className="text-sm text-slate-400">{label}</div>
-      <div className="font-medium mt-1">{value}</div>
+      <div className="text-sm text-slate-400">
+        {label}
+      </div>
+
+      <div className="font-medium mt-1">
+        {value}
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import DeleteCaseButton from "../components/DeleteCaseButton";
+import Navbar from "../components/Navbar";
 
 const cases = [
   {
@@ -94,49 +95,17 @@ export default function CasesPage() {
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
-      {/* Navigation */}
-      <nav className="bg-slate-950 text-white px-6 md:px-8 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="bg-cyan-500 rounded-xl w-10 h-10 flex items-center justify-center font-bold">
-            +
-          </div>
+      <Navbar />
 
-          <span className="text-2xl font-bold">SNCT</span>
-        </div>
-
-        <div className="hidden md:flex items-center gap-8 text-sm">
-          <a href="/" className="hover:text-cyan-400">
-            Dashboard
-          </a>
-
-          <a
-            href="/cases"
-            className="bg-cyan-500 px-5 py-2 rounded-lg"
-          >
-            Cases
-          </a>
-
-          <a href="/add-case" className="hover:text-cyan-400">
-            Add Case
-          </a>
-
-          <a href="/about" className="hover:text-cyan-400">
-            About
-          </a>
-
-          <span className="text-slate-400">Logout</span>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <section className="max-w-7xl mx-auto px-6 py-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold border-l-4 border-cyan-500 pl-4">
+            <h1 className="text-3xl md:text-4xl font-bold border-l-4 border-cyan-500 pl-4">
               Surgical Cases
             </h1>
 
-            <p className="text-slate-500 mt-3 text-lg">
+            <p className="text-slate-500 mt-3 text-base md:text-lg">
               View and manage your surgical navigation and robotic-assisted
               cases.
             </p>
@@ -151,20 +120,20 @@ export default function CasesPage() {
         </div>
 
         {/* Search and Filters */}
-        <div className="mt-8 bg-white rounded-2xl shadow-sm p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="mt-8 bg-white rounded-2xl shadow-sm p-5 md:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <input
               type="text"
               placeholder="Search cases..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              className="border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
             />
 
             <select
               value={regionFilter}
               onChange={(event) => setRegionFilter(event.target.value)}
-              className="border border-slate-300 rounded-lg px-4 py-3 bg-white"
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white"
             >
               <option>All Regions</option>
               <option>Spine</option>
@@ -177,7 +146,7 @@ export default function CasesPage() {
               onChange={(event) =>
                 setTechnologyFilter(event.target.value)
               }
-              className="border border-slate-300 rounded-lg px-4 py-3 bg-white"
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white"
             >
               <option>All Technology</option>
               <option>Navigation</option>
@@ -187,7 +156,7 @@ export default function CasesPage() {
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="border border-slate-300 rounded-lg px-4 py-3 bg-white"
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white"
             >
               <option>All Statuses</option>
               <option>Completed</option>
@@ -225,7 +194,7 @@ export default function CasesPage() {
         {/* Cases Table */}
         <div className="mt-6 bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full min-w-[1000px] text-left">
               <thead className="bg-slate-50 text-slate-500 text-sm">
                 <tr>
                   <th className="px-6 py-4">Case / ID</th>
@@ -274,7 +243,7 @@ export default function CasesPage() {
                     <td className="px-6 py-5">{item.duration}</td>
 
                     <td className="px-6 py-5">
-                      <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm">
+                      <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm whitespace-nowrap">
                         ● {item.status}
                       </span>
                     </td>
@@ -304,7 +273,7 @@ export default function CasesPage() {
             </table>
           </div>
 
-          {/* No Results */}
+          {/* No Search Results */}
           {filteredCases.length === 0 && (
             <div className="py-14 px-6 text-center">
               <div className="text-4xl mb-3">⌕</div>

@@ -1,53 +1,23 @@
 import Link from "next/link";
+import Navbar from "../components/Navbar";
 
 export default function AboutPage() {
   return (
     <main className="min-h-screen bg-slate-50">
-      {/* Navigation */}
-      <nav className="bg-slate-900 text-white px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-cyan-600 w-10 h-10 rounded-lg flex items-center justify-center font-bold">
-              +
-            </div>
-            <span className="text-xl font-bold">SNCT</span>
-          </div>
-
-          <div className="flex items-center gap-6 text-sm">
-            <Link href="/" className="hover:text-cyan-400">
-              Dashboard
-            </Link>
-
-            <Link href="/cases" className="hover:text-cyan-400">
-              Cases
-            </Link>
-
-            <Link href="/add-case" className="hover:text-cyan-400">
-              Add Case
-            </Link>
-
-            <Link
-              href="/about"
-              className="bg-cyan-600 px-4 py-2 rounded-lg font-medium"
-            >
-              About
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Page Content */}
-      <section className="max-w-6xl mx-auto px-6 py-12">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-8 md:py-12">
         <div className="mb-10">
           <p className="text-cyan-600 font-semibold mb-2">
             Surgical Navigation Case Tracker
           </p>
 
-          <h1 className="text-4xl font-bold text-slate-900 mb-4">
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
             About SNCT
           </h1>
 
-          <p className="text-slate-600 text-lg max-w-3xl">
+          <p className="text-slate-600 text-base md:text-lg max-w-3xl">
             SNCT is a surgical case tracking application designed to organize
             and review navigation and robotic-assisted surgical cases in one
             centralized interface.
@@ -55,8 +25,8 @@ export default function AboutPage() {
         </div>
 
         {/* Information Cards */}
-        <div className="grid md:grid-cols-2 gap-6 mb-10">
-          <div className="bg-white border border-slate-200 rounded-xl p-7 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-7 shadow-sm">
             <h2 className="text-xl font-bold text-slate-900 mb-3">
               Project Purpose
             </h2>
@@ -69,7 +39,7 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl p-7 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-7 shadow-sm">
             <h2 className="text-xl font-bold text-slate-900 mb-3">
               Case Management
             </h2>
@@ -82,7 +52,7 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl p-7 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-7 shadow-sm">
             <h2 className="text-xl font-bold text-slate-900 mb-3">
               Navigation & Robotics
             </h2>
@@ -94,7 +64,7 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl p-7 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-7 shadow-sm">
             <h2 className="text-xl font-bold text-slate-900 mb-3">
               Project Development
             </h2>
@@ -109,12 +79,12 @@ export default function AboutPage() {
         </div>
 
         {/* Current Features */}
-        <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 sm:p-8 shadow-sm">
           <h2 className="text-2xl font-bold text-slate-900 mb-6">
             Current Features
           </h2>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-slate-50 rounded-lg p-5">
               <p className="text-cyan-600 font-bold mb-1">CREATE</p>
               <p className="text-slate-700">Add new surgical cases</p>
@@ -122,12 +92,16 @@ export default function AboutPage() {
 
             <div className="bg-slate-50 rounded-lg p-5">
               <p className="text-cyan-600 font-bold mb-1">READ</p>
-              <p className="text-slate-700">View and review case records</p>
+              <p className="text-slate-700">
+                View and review case records
+              </p>
             </div>
 
             <div className="bg-slate-50 rounded-lg p-5">
               <p className="text-cyan-600 font-bold mb-1">UPDATE</p>
-              <p className="text-slate-700">Edit existing case information</p>
+              <p className="text-slate-700">
+                Edit existing case information
+              </p>
             </div>
 
             <div className="bg-slate-50 rounded-lg p-5">
@@ -141,11 +115,16 @@ export default function AboutPage() {
         <div className="mt-8">
           <Link
             href="/"
-            className="inline-block bg-cyan-600 hover:bg-cyan-700 text-white font-medium px-6 py-3 rounded-lg"
+            className="inline-block w-full sm:w-auto bg-cyan-600 hover:bg-cyan-700 text-white font-medium px-6 py-3 rounded-lg text-center"
           >
             Back to Dashboard
           </Link>
         </div>
+
+        <footer className="text-xs text-slate-400 mt-10 pb-6">
+          SNCT • For educational and simulation use only • Not for clinical
+          decision-making
+        </footer>
       </section>
     </main>
   );

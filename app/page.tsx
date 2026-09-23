@@ -1,5 +1,6 @@
 import Link from "next/link";
 import DeleteCaseButton from "./components/DeleteCaseButton";
+import Navbar from "./components/Navbar";
 
 const recentCases = [
   {
@@ -43,53 +44,22 @@ const recentCases = [
 export default function Home() {
   return (
     <main className="min-h-screen bg-slate-50">
-      {/* Navigation */}
-      <nav className="bg-slate-900 text-white px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-cyan-600 w-10 h-10 rounded-lg flex items-center justify-center font-bold">
-              +
-            </div>
-            <span className="text-xl font-bold">SNCT</span>
-          </div>
-
-          <div className="flex items-center gap-6 text-sm">
-            <Link
-              href="/"
-              className="bg-cyan-600 px-4 py-2 rounded-lg font-medium"
-            >
-              Dashboard
-            </Link>
-
-            <Link href="/cases" className="hover:text-cyan-400">
-              Cases
-            </Link>
-
-            <Link href="/add-case" className="hover:text-cyan-400">
-              Add Case
-            </Link>
-
-            <Link href="/about" className="hover:text-cyan-400">
-              About
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Dashboard Content */}
-      <section className="max-w-7xl mx-auto px-6 py-10">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-10">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-10">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
           <div>
             <p className="text-cyan-600 font-semibold mb-2">
               Surgical Case Management
             </p>
 
-            <h1 className="text-4xl font-bold text-slate-900 mb-3">
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
               Surgical Navigation Case Tracker
             </h1>
 
-            <p className="text-slate-600 text-lg">
+            <p className="text-slate-600 text-base md:text-lg">
               Track and review your navigation and robotic-assisted surgical
               cases.
             </p>
@@ -97,20 +67,22 @@ export default function Home() {
 
           <Link
             href="/add-case"
-            className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl font-semibold shadow text-center"
+            className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl font-semibold shadow text-center md:self-center"
           >
             + Add Case
           </Link>
         </div>
 
         {/* Statistics */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
           <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
             <p className="text-sm font-medium text-slate-500 mb-2">
               Total Cases
             </p>
             <p className="text-3xl font-bold text-slate-900">24</p>
-            <p className="text-sm text-slate-500 mt-2">All recorded cases</p>
+            <p className="text-sm text-slate-500 mt-2">
+              All recorded cases
+            </p>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
@@ -128,7 +100,9 @@ export default function Home() {
               Robotic Cases
             </p>
             <p className="text-3xl font-bold text-slate-900">8</p>
-            <p className="text-sm text-slate-500 mt-2">Robotic-assisted</p>
+            <p className="text-sm text-slate-500 mt-2">
+              Robotic-assisted
+            </p>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
@@ -136,17 +110,20 @@ export default function Home() {
               Average Duration
             </p>
             <p className="text-3xl font-bold text-slate-900">142 min</p>
-            <p className="text-sm text-slate-500 mt-2">Across all cases</p>
+            <p className="text-sm text-slate-500 mt-2">
+              Across all cases
+            </p>
           </div>
         </div>
 
         {/* Recent Cases */}
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold text-slate-900">
                 Recent Cases
               </h2>
+
               <p className="text-sm text-slate-500 mt-1">
                 Recently recorded surgical cases
               </p>
@@ -160,9 +137,9 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Makes table scrollable on smaller screens */}
+          {/* Responsive table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full min-w-[950px] text-left">
               <thead className="bg-slate-50 text-slate-500 text-sm">
                 <tr>
                   <th className="px-6 py-4 font-semibold">Case ID</th>
@@ -247,15 +224,19 @@ export default function Home() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 gap-6 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
           <Link
             href="/add-case"
             className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:border-cyan-300 transition-colors"
           >
-            <p className="text-cyan-600 font-semibold mb-2">New Case</p>
+            <p className="text-cyan-600 font-semibold mb-2">
+              New Case
+            </p>
+
             <h3 className="text-lg font-bold text-slate-900 mb-1">
               Record a Surgical Case
             </h3>
+
             <p className="text-slate-500">
               Add a new navigation or robotic-assisted procedure.
             </p>
@@ -265,15 +246,25 @@ export default function Home() {
             href="/cases"
             className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:border-cyan-300 transition-colors"
           >
-            <p className="text-cyan-600 font-semibold mb-2">Case Records</p>
+            <p className="text-cyan-600 font-semibold mb-2">
+              Case Records
+            </p>
+
             <h3 className="text-lg font-bold text-slate-900 mb-1">
               Manage Existing Cases
             </h3>
+
             <p className="text-slate-500">
               View, edit, and manage previously recorded surgical cases.
             </p>
           </Link>
         </div>
+
+        {/* Footer */}
+        <footer className="text-xs text-slate-400 mt-10 pb-6">
+          SNCT • For educational and simulation use only • Not for clinical
+          decision-making
+        </footer>
       </section>
     </main>
   );
