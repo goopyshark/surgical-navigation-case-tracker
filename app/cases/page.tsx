@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import DeleteCaseButton from "../components/DeleteCaseButton";
 
 const cases = [
@@ -44,13 +47,60 @@ const cases = [
 ];
 
 export default function CasesPage() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [regionFilter, setRegionFilter] = useState("All Regions");
+  const [technologyFilter, setTechnologyFilter] =
+    useState("All Technology");
+  const [statusFilter, setStatusFilter] = useState("All Statuses");
+
+  const filteredCases = cases.filter((item) => {
+    const search = searchTerm.toLowerCase().trim();
+
+    const matchesSearch =
+      item.name.toLowerCase().includes(search) ||
+      item.id.toLowerCase().includes(search) ||
+      item.procedure.toLowerCase().includes(search);
+
+    const matchesRegion =
+      regionFilter === "All Regions" || item.region === regionFilter;
+
+    const matchesTechnology =
+      technologyFilter === "All Technology" ||
+      item.type === technologyFilter;
+
+    const matchesStatus =
+      statusFilter === "All Statuses" || item.status === statusFilter;
+
+    return (
+      matchesSearch &&
+      matchesRegion &&
+      matchesTechnology &&
+      matchesStatus
+    );
+  });
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setRegionFilter("All Regions");
+    setTechnologyFilter("All Technology");
+    setStatusFilter("All Statuses");
+  };
+
+  const filtersActive =
+    searchTerm !== "" ||
+    regionFilter !== "All Regions" ||
+    technologyFilter !== "All Technology" ||
+    statusFilter !== "All Statuses";
+
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
+      {/* Navigation */}
       <nav className="bg-slate-950 text-white px-6 md:px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="bg-cyan-500 rounded-xl w-10 h-10 flex items-center justify-center font-bold">
             +
           </div>
+
           <span className="text-2xl font-bold">SNCT</span>
         </div>
 
@@ -58,28 +108,34 @@ export default function CasesPage() {
           <a href="/" className="hover:text-cyan-400">
             Dashboard
           </a>
+
           <a
             href="/cases"
             className="bg-cyan-500 px-5 py-2 rounded-lg"
           >
             Cases
           </a>
+
           <a href="/add-case" className="hover:text-cyan-400">
             Add Case
           </a>
+
           <a href="/about" className="hover:text-cyan-400">
             About
           </a>
+
           <span className="text-slate-400">Logout</span>
         </div>
       </nav>
 
+      {/* Main Content */}
       <section className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div>
             <h1 className="text-4xl font-bold border-l-4 border-cyan-500 pl-4">
               Surgical Cases
             </h1>
+
             <p className="text-slate-500 mt-3 text-lg">
               View and manage your surgical navigation and robotic-assisted
               cases.
@@ -94,36 +150,79 @@ export default function CasesPage() {
           </a>
         </div>
 
+        {/* Search and Filters */}
         <div className="mt-8 bg-white rounded-2xl shadow-sm p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <input
               type="text"
               placeholder="Search cases..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
               className="border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
             />
 
-            <select className="border border-slate-300 rounded-lg px-4 py-3 bg-white">
+            <select
+              value={regionFilter}
+              onChange={(event) => setRegionFilter(event.target.value)}
+              className="border border-slate-300 rounded-lg px-4 py-3 bg-white"
+            >
               <option>All Regions</option>
               <option>Spine</option>
               <option>Cranial</option>
               <option>Cervical</option>
             </select>
 
-            <select className="border border-slate-300 rounded-lg px-4 py-3 bg-white">
+            <select
+              value={technologyFilter}
+              onChange={(event) =>
+                setTechnologyFilter(event.target.value)
+              }
+              className="border border-slate-300 rounded-lg px-4 py-3 bg-white"
+            >
               <option>All Technology</option>
               <option>Navigation</option>
               <option>Robotic</option>
             </select>
 
-            <select className="border border-slate-300 rounded-lg px-4 py-3 bg-white">
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="border border-slate-300 rounded-lg px-4 py-3 bg-white"
+            >
               <option>All Statuses</option>
               <option>Completed</option>
               <option>Planned</option>
               <option>Cancelled</option>
             </select>
           </div>
+
+          {/* Filter Summary */}
+          <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm text-slate-500">
+              Showing{" "}
+              <span className="font-semibold text-slate-800">
+                {filteredCases.length}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold text-slate-800">
+                {cases.length}
+              </span>{" "}
+              cases
+            </p>
+
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-cyan-700 hover:text-cyan-900 font-medium text-sm text-left sm:text-right"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
         </div>
 
+        {/* Cases Table */}
         <div className="mt-6 bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -141,16 +240,21 @@ export default function CasesPage() {
               </thead>
 
               <tbody>
-                {cases.map((item) => (
-                  <tr key={item.id} className="border-t">
+                {filteredCases.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-t hover:bg-slate-50 transition"
+                  >
                     <td className="px-6 py-5">
                       <div className="font-semibold">{item.name}</div>
+
                       <div className="text-xs text-slate-400 mt-1">
                         {item.id}
                       </div>
                     </td>
 
                     <td className="px-6 py-5">{item.procedure}</td>
+
                     <td className="px-6 py-5">{item.region}</td>
 
                     <td className="px-6 py-5">
@@ -166,6 +270,7 @@ export default function CasesPage() {
                     </td>
 
                     <td className="px-6 py-5">{item.date}</td>
+
                     <td className="px-6 py-5">{item.duration}</td>
 
                     <td className="px-6 py-5">
@@ -178,14 +283,14 @@ export default function CasesPage() {
                       <div className="flex gap-2">
                         <a
                           href={`/cases/${item.id}`}
-                          className="border border-cyan-300 text-cyan-700 px-3 py-2 rounded-lg"
+                          className="border border-cyan-300 text-cyan-700 hover:bg-cyan-50 px-3 py-2 rounded-lg"
                         >
                           View
                         </a>
 
                         <a
                           href={`/cases/${item.id}/edit`}
-                          className="border border-slate-300 text-slate-700 px-3 py-2 rounded-lg"
+                          className="border border-slate-300 text-slate-700 hover:bg-slate-100 px-3 py-2 rounded-lg"
                         >
                           Edit
                         </a>
@@ -198,38 +303,29 @@ export default function CasesPage() {
               </tbody>
             </table>
           </div>
-        </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mt-8">
-          <a
-            href="/add-case"
-            className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:border-cyan-300 transition-colors"
-          >
-            <p className="text-cyan-600 font-semibold mb-2">New Case</p>
+          {/* No Results */}
+          {filteredCases.length === 0 && (
+            <div className="py-14 px-6 text-center">
+              <div className="text-4xl mb-3">⌕</div>
 
-            <h3 className="text-lg font-bold text-slate-900 mb-1">
-              Record a Surgical Case
-            </h3>
+              <h2 className="text-xl font-semibold">
+                No cases found
+              </h2>
 
-            <p className="text-slate-500">
-              Add a new navigation or robotic-assisted procedure.
-            </p>
-          </a>
+              <p className="text-slate-500 mt-2">
+                Try changing your search or filter selections.
+              </p>
 
-          <a
-            href="/"
-            className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:border-cyan-300 transition-colors"
-          >
-            <p className="text-cyan-600 font-semibold mb-2">Dashboard</p>
-
-            <h3 className="text-lg font-bold text-slate-900 mb-1">
-              Return to Overview
-            </h3>
-
-            <p className="text-slate-500">
-              Review case totals, recent procedures, and overall activity.
-            </p>
-          </a>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-5 bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2 rounded-lg font-medium"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
         </div>
 
         <footer className="text-xs text-slate-400 mt-8 pb-6">
