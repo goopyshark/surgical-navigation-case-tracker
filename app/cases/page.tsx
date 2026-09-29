@@ -275,7 +275,15 @@ export default function CasesPage() {
                             </a>
 
                             <DeleteCaseButton
+                              caseId={item.id}
                               caseName={item.name}
+                              onDeleted={(caseId) => {
+                                setCases((currentCases) =>
+                                  currentCases.filter(
+                                    (surgicalCase) => surgicalCase.id !== caseId
+                                  )
+                                );
+                              }}
                             />
                           </div>
                         </td>

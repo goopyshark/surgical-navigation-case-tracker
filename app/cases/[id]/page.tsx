@@ -126,7 +126,10 @@ export default function CaseDetailsPage() {
               Edit Case
             </a>
 
-            <DeleteCaseButton caseName={surgicalCase.name} />
+            <DeleteCaseButton
+              caseId={surgicalCase.id}
+              caseName={surgicalCase.name}
+            />
           </div>
         </div>
 
