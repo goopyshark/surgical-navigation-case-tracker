@@ -1,77 +1,105 @@
-import DeleteCaseButton from "../../components/DeleteCaseButton";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
+import DeleteCaseButton from "../../components/DeleteCaseButton";
+import {
+  getCaseById,
+  SurgicalCase,
+} from "../../lib/caseStorage";
 
-type CaseDetailsPageProps = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+export default function CaseDetailsPage() {
+  const params = useParams();
 
-const sampleCases = [
-  {
-    id: "SNC-2026-024",
-    name: "Scoliosis Fusion",
-    procedure: "Posterior Spinal Fusion",
-    region: "Spine",
-    type: "Navigation",
-    date: "Aug 27, 2026",
-    duration: "178 min",
-    status: "Completed",
-    systemName: "Surgical Navigation Platform",
-    registrationMethod: "Surface Matching",
-    accuracy: "1.2 mm",
-    technicalIssues: "No major technical issues were reported.",
-    notes:
-      "Navigation was used to support pedicle screw placement during the simulated case.",
-  },
-  {
-    id: "SNC-2026-023",
-    name: "Cranial Biopsy",
-    procedure: "Stereotactic Biopsy",
-    region: "Cranial",
-    type: "Navigation",
-    date: "Aug 24, 2026",
-    duration: "94 min",
-    status: "Completed",
-    systemName: "Cranial Navigation Platform",
-    registrationMethod: "Fiducial Registration",
-    accuracy: "0.9 mm",
-    technicalIssues: "Minor registration adjustment was required.",
-    notes:
-      "Navigation was used to localize the simulated biopsy target.",
-  },
-  {
-    id: "SNC-2026-022",
-    name: "Pedicle Screw Placement",
-    procedure: "Lumbar Fusion",
-    region: "Spine",
-    type: "Robotic",
-    date: "Aug 20, 2026",
-    duration: "154 min",
-    status: "Completed",
-    systemName: "Robotic Spine Platform",
-    registrationMethod: "3D Image Registration",
-    accuracy: "1.0 mm",
-    technicalIssues: "No major technical issues were reported.",
-    notes:
-      "Robotic assistance was used for simulated pedicle screw trajectory planning.",
-  },
-];
+  const id = Array.isArray(params.id)
+    ? params.id[0]
+    : params.id;
 
-export default async function CaseDetailsPage({
-  params,
-}: CaseDetailsPageProps) {
-  const { id } = await params;
+  const [surgicalCase, setSurgicalCase] =
+    useState<SurgicalCase | null>(null);
 
-  const surgicalCase =
-    sampleCases.find((item) => item.id === id) ?? sampleCases[0];
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!id) {
+      setLoaded(true);
+      return;
+    }
+
+    const foundCase = getCaseById(id);
+
+    setSurgicalCase(foundCase ?? null);
+    setLoaded(true);
+  }, [id]);
+
+  if (!loaded) {
+    return (
+      <main className="min-h-screen bg-slate-100 text-slate-900">
+        <Navbar />
+
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+            <p className="text-slate-500">Loading case details...</p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (!surgicalCase) {
+    return (
+      <main className="min-h-screen bg-slate-100 text-slate-900">
+        <Navbar />
+
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+          <a
+            href="/cases"
+            className="text-cyan-700 font-medium hover:underline"
+          >
+            ← Back to Cases
+          </a>
+
+          <div className="mt-6 bg-white rounded-2xl shadow-sm p-8 text-center">
+            <h1 className="text-2xl font-bold text-slate-900">
+              Case Not Found
+            </h1>
+
+            <p className="text-slate-500 mt-3">
+              The requested surgical case could not be found.
+            </p>
+
+            <a
+              href="/cases"
+              className="inline-block mt-6 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-lg font-semibold"
+            >
+              Return to Cases
+            </a>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  function formatDate(date: string) {
+    if (!date) {
+      return "Not specified";
+    }
+
+    const parsedDate = new Date(`${date}T00:00:00`);
+
+    return parsedDate.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
       <Navbar />
 
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        {/* Back Link */}
         <a
           href="/cases"
           className="text-cyan-700 font-medium hover:underline"
@@ -79,8 +107,7 @@ export default async function CaseDetailsPage({
           ← Back to Cases
         </a>
 
-        {/* Case Header */}
-        <div className="mt-5 flex flex-col md:flex-row md:items-start md:justify-between gap-5">
+        <div className="mt-5 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold border-l-4 border-cyan-500 pl-4">
               {surgicalCase.name}
@@ -103,9 +130,9 @@ export default async function CaseDetailsPage({
           </div>
         </div>
 
-        {/* Case Information */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <section className="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
+          {/* Procedure Information */}
+          <section className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="text-xl font-bold mb-5">
               Procedure Information
             </h2>
@@ -122,12 +149,12 @@ export default async function CaseDetailsPage({
 
             <DetailRow
               label="Case Date"
-              value={surgicalCase.date}
+              value={formatDate(surgicalCase.date)}
             />
 
             <DetailRow
               label="Duration"
-              value={surgicalCase.duration}
+              value={`${surgicalCase.duration} min`}
             />
 
             <DetailRow
@@ -136,7 +163,8 @@ export default async function CaseDetailsPage({
             />
           </section>
 
-          <section className="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
+          {/* Navigation / Robotics Information */}
+          <section className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="text-xl font-bold mb-5">
               Navigation / Robotics Information
             </h2>
@@ -148,40 +176,52 @@ export default async function CaseDetailsPage({
 
             <DetailRow
               label="System Name"
-              value={surgicalCase.systemName}
+              value={
+                surgicalCase.systemName ||
+                "Not specified"
+              }
             />
 
             <DetailRow
               label="Registration Method"
-              value={surgicalCase.registrationMethod}
+              value={
+                surgicalCase.registrationMethod ||
+                "Not specified"
+              }
             />
 
             <DetailRow
               label="Navigation Accuracy"
-              value={surgicalCase.accuracy}
+              value={
+                surgicalCase.accuracy
+                  ? `${surgicalCase.accuracy} mm`
+                  : "Not specified"
+              }
             />
           </section>
         </div>
 
         {/* Technical Issues */}
-        <section className="mt-6 bg-white rounded-2xl shadow-sm p-5 sm:p-6">
+        <section className="mt-6 bg-white rounded-2xl shadow-sm p-6">
           <h2 className="text-xl font-bold mb-3">
             Technical Issues
           </h2>
 
           <p className="text-slate-600 leading-7">
-            {surgicalCase.technicalIssues}
+            {surgicalCase.technicalIssues ||
+              "No technical issues were reported."}
           </p>
         </section>
 
         {/* Notes */}
-        <section className="mt-6 bg-white rounded-2xl shadow-sm p-5 sm:p-6">
+        <section className="mt-6 bg-white rounded-2xl shadow-sm p-6">
           <h2 className="text-xl font-bold mb-3">
             Notes
           </h2>
 
           <p className="text-slate-600 leading-7">
-            {surgicalCase.notes}
+            {surgicalCase.notes ||
+              "No additional notes were provided."}
           </p>
         </section>
 
