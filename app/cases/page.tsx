@@ -1,58 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DeleteCaseButton from "../components/DeleteCaseButton";
 import Navbar from "../components/Navbar";
-
-const cases = [
-  {
-    id: "SNC-2026-024",
-    name: "Scoliosis Fusion",
-    procedure: "Posterior Spinal Fusion",
-    region: "Spine",
-    type: "Navigation",
-    date: "Aug 27, 2026",
-    duration: "178 min",
-    status: "Completed",
-  },
-  {
-    id: "SNC-2026-023",
-    name: "Cranial Biopsy",
-    procedure: "Stereotactic Biopsy",
-    region: "Cranial",
-    type: "Navigation",
-    date: "Aug 24, 2026",
-    duration: "94 min",
-    status: "Completed",
-  },
-  {
-    id: "SNC-2026-022",
-    name: "Pedicle Screw Placement",
-    procedure: "Lumbar Fusion",
-    region: "Spine",
-    type: "Robotic",
-    date: "Aug 20, 2026",
-    duration: "154 min",
-    status: "Completed",
-  },
-  {
-    id: "SNC-2026-021",
-    name: "Cervical Fusion",
-    procedure: "Anterior Cervical Fusion",
-    region: "Cervical",
-    type: "Navigation",
-    date: "Aug 15, 2026",
-    duration: "126 min",
-    status: "Completed",
-  },
-];
+import {
+  getCases,
+  SurgicalCase,
+} from "../lib/caseStorage";
 
 export default function CasesPage() {
+  const [cases, setCases] = useState<SurgicalCase[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState("All Regions");
   const [technologyFilter, setTechnologyFilter] =
     useState("All Technology");
   const [statusFilter, setStatusFilter] = useState("All Statuses");
+
+  useEffect(() => {
+    setCases(getCases());
+    setLoaded(true);
+  }, []);
 
   const filteredCases = cases.filter((item) => {
     const search = searchTerm.toLowerCase().trim();
@@ -70,7 +39,8 @@ export default function CasesPage() {
       item.type === technologyFilter;
 
     const matchesStatus =
-      statusFilter === "All Statuses" || item.status === statusFilter;
+      statusFilter === "All Statuses" ||
+      item.status === statusFilter;
 
     return (
       matchesSearch &&
@@ -92,6 +62,20 @@ export default function CasesPage() {
     regionFilter !== "All Regions" ||
     technologyFilter !== "All Technology" ||
     statusFilter !== "All Statuses";
+
+  function formatDate(date: string) {
+    if (!date) {
+      return "Not specified";
+    }
+
+    const parsedDate = new Date(`${date}T00:00:00`);
+
+    return parsedDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
@@ -139,6 +123,8 @@ export default function CasesPage() {
               <option>Spine</option>
               <option>Cranial</option>
               <option>Cervical</option>
+              <option>Thoracic</option>
+              <option>Lumbar</option>
             </select>
 
             <select
@@ -151,6 +137,7 @@ export default function CasesPage() {
               <option>All Technology</option>
               <option>Navigation</option>
               <option>Robotic</option>
+              <option>Navigation + Robotic</option>
             </select>
 
             <select
@@ -165,7 +152,6 @@ export default function CasesPage() {
             </select>
           </div>
 
-          {/* Filter Summary */}
           <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-sm text-slate-500">
               Showing{" "}
@@ -193,107 +179,134 @@ export default function CasesPage() {
 
         {/* Cases Table */}
         <div className="mt-6 bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px] text-left">
-              <thead className="bg-slate-50 text-slate-500 text-sm">
-                <tr>
-                  <th className="px-6 py-4">Case / ID</th>
-                  <th className="px-6 py-4">Procedure</th>
-                  <th className="px-6 py-4">Region</th>
-                  <th className="px-6 py-4">Type</th>
-                  <th className="px-6 py-4">Date</th>
-                  <th className="px-6 py-4">Duration</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredCases.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-t hover:bg-slate-50 transition"
-                  >
-                    <td className="px-6 py-5">
-                      <div className="font-semibold">{item.name}</div>
-
-                      <div className="text-xs text-slate-400 mt-1">
-                        {item.id}
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-5">{item.procedure}</td>
-
-                    <td className="px-6 py-5">{item.region}</td>
-
-                    <td className="px-6 py-5">
-                      <span
-                        className={
-                          item.type === "Navigation"
-                            ? "bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full text-sm"
-                            : "bg-violet-100 text-violet-700 px-3 py-1 rounded-full text-sm"
-                        }
-                      >
-                        {item.type}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-5">{item.date}</td>
-
-                    <td className="px-6 py-5">{item.duration}</td>
-
-                    <td className="px-6 py-5">
-                      <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm whitespace-nowrap">
-                        ● {item.status}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-5">
-                      <div className="flex gap-2">
-                        <a
-                          href={`/cases/${item.id}`}
-                          className="border border-cyan-300 text-cyan-700 hover:bg-cyan-50 px-3 py-2 rounded-lg"
-                        >
-                          View
-                        </a>
-
-                        <a
-                          href={`/cases/${item.id}/edit`}
-                          className="border border-slate-300 text-slate-700 hover:bg-slate-100 px-3 py-2 rounded-lg"
-                        >
-                          Edit
-                        </a>
-
-                        <DeleteCaseButton caseName={item.name} />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* No Search Results */}
-          {filteredCases.length === 0 && (
-            <div className="py-14 px-6 text-center">
-              <div className="text-4xl mb-3">⌕</div>
-
-              <h2 className="text-xl font-semibold">
-                No cases found
-              </h2>
-
-              <p className="text-slate-500 mt-2">
-                Try changing your search or filter selections.
-              </p>
-
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="mt-5 bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2 rounded-lg font-medium"
-              >
-                Clear Filters
-              </button>
+          {!loaded ? (
+            <div className="py-14 px-6 text-center text-slate-500">
+              Loading cases...
             </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1000px] text-left">
+                  <thead className="bg-slate-50 text-slate-500 text-sm">
+                    <tr>
+                      <th className="px-6 py-4">Case / ID</th>
+                      <th className="px-6 py-4">Procedure</th>
+                      <th className="px-6 py-4">Region</th>
+                      <th className="px-6 py-4">Type</th>
+                      <th className="px-6 py-4">Date</th>
+                      <th className="px-6 py-4">Duration</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4">Actions</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filteredCases.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="border-t hover:bg-slate-50 transition"
+                      >
+                        <td className="px-6 py-5">
+                          <div className="font-semibold">
+                            {item.name}
+                          </div>
+
+                          <div className="text-xs text-slate-400 mt-1">
+                            {item.id}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-5">
+                          {item.procedure}
+                        </td>
+
+                        <td className="px-6 py-5">
+                          {item.region}
+                        </td>
+
+                        <td className="px-6 py-5">
+                          <span
+                            className={
+                              item.type === "Navigation"
+                                ? "bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full text-sm whitespace-nowrap"
+                                : "bg-violet-100 text-violet-700 px-3 py-1 rounded-full text-sm whitespace-nowrap"
+                            }
+                          >
+                            {item.type}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-5 whitespace-nowrap">
+                          {formatDate(item.date)}
+                        </td>
+
+                        <td className="px-6 py-5 whitespace-nowrap">
+                          {item.duration} min
+                        </td>
+
+                        <td className="px-6 py-5">
+                          <span
+                            className={
+                              item.status === "Completed"
+                                ? "bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm whitespace-nowrap"
+                                : item.status === "Cancelled"
+                                  ? "bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm whitespace-nowrap"
+                                  : "bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm whitespace-nowrap"
+                            }
+                          >
+                            ● {item.status}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-5">
+                          <div className="flex gap-2">
+                            <a
+                              href={`/cases/${item.id}`}
+                              className="border border-cyan-300 text-cyan-700 hover:bg-cyan-50 px-3 py-2 rounded-lg"
+                            >
+                              View
+                            </a>
+
+                            <a
+                              href={`/cases/${item.id}/edit`}
+                              className="border border-slate-300 text-slate-700 hover:bg-slate-100 px-3 py-2 rounded-lg"
+                            >
+                              Edit
+                            </a>
+
+                            <DeleteCaseButton
+                              caseName={item.name}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredCases.length === 0 && (
+                <div className="py-14 px-6 text-center">
+                  <div className="text-4xl mb-3">⌕</div>
+
+                  <h2 className="text-xl font-semibold">
+                    No cases found
+                  </h2>
+
+                  <p className="text-slate-500 mt-2">
+                    Try changing your search or filter selections.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="mt-5 bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2 rounded-lg font-medium"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
 
