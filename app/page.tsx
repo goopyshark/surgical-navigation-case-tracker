@@ -206,124 +206,71 @@ export default function Home() {
               </Link>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1000px] text-left">
-                <thead className="bg-slate-50 text-slate-500 text-sm">
-                  <tr>
-                    <th className="px-6 py-4 font-semibold">
-                      Case ID
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Procedure
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Type
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Region
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Date
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Duration
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Status
-                    </th>
-
-                    <th className="px-6 py-4 font-semibold">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-200">
-                  {recentCases.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-slate-50 transition-colors"
-                    >
-                      <td className="px-6 py-5 font-medium text-slate-900 whitespace-nowrap">
-                        {item.id}
-                      </td>
-
-                      <td className="px-6 py-5 text-slate-700 whitespace-nowrap">
-                        {item.procedure}
-                      </td>
-
-                      <td className="px-6 py-5">
-                        <span
-                          className={
-                            item.type === "Navigation"
-                              ? "inline-block bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
-                              : "inline-block bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
-                          }
-                        >
-                          {item.type}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-5 text-slate-600">
-                        {item.region}
-                      </td>
-
-                      <td className="px-6 py-5 text-slate-600 whitespace-nowrap">
-                        {formatDate(item.date)}
-                      </td>
-
-                      <td className="px-6 py-5 text-slate-600 whitespace-nowrap">
-                        {item.duration} min
-                      </td>
-
-                      <td className="px-6 py-5">
-                        <span
-                          className={
-                            item.status === "Completed"
-                              ? "inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
-                              : item.status === "Cancelled"
-                                ? "inline-block bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
-                                : "inline-block bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
-                          }
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2 whitespace-nowrap">
-                          <Link
-                            href={`/cases/${item.id}`}
-                            className="border border-cyan-300 text-cyan-700 px-3 py-2 rounded-lg hover:bg-cyan-50"
-                          >
-                            View
-                          </Link>
-
-                          <Link
-                            href={`/cases/${item.id}/edit`}
-                            className="border border-slate-300 text-slate-700 px-3 py-2 rounded-lg hover:bg-slate-50"
-                          >
-                            Edit
-                          </Link>
-
-                          <DeleteCaseButton
-                            caseId={item.id}
-                            caseName={item.name}
-                            onDeleted={handleCaseDeleted}
-                          />
-                        </div>
-                      </td>
+            <>
+              {/* Compact cards keep every action visible on phones. */}
+              <div className="divide-y divide-slate-200 lg:hidden">
+                {recentCases.map((item) => (
+                  <div key={item.id} className="p-5 space-y-3">
+                    <div className="min-w-0">
+                      <Link href={`/cases/${item.id}`} className="font-semibold text-slate-900 hover:text-cyan-700 break-words">
+                        {item.name}
+                      </Link>
+                      <p className="text-xs text-slate-500 mt-1 break-all">{item.id}</p>
+                    </div>
+                    <p className="text-sm text-slate-700 break-words">{item.procedure}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-full">{item.region}</span>
+                      <span className={item.type === "Navigation" ? "bg-cyan-100 text-cyan-700 px-2 py-1 rounded-full" : "bg-violet-100 text-violet-700 px-2 py-1 rounded-full"}>{item.type}</span>
+                      <span className={item.status === "Completed" ? "bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full" : item.status === "Cancelled" ? "bg-red-100 text-red-700 px-2 py-1 rounded-full" : "bg-amber-100 text-amber-700 px-2 py-1 rounded-full"}>● {item.status}</span>
+                    </div>
+                    <p className="text-sm text-slate-500">{formatDate(item.date)} · {item.duration} min</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link href={`/cases/${item.id}`} className="border border-cyan-300 text-cyan-700 px-3 py-2 rounded-lg hover:bg-cyan-50">View</Link>
+                      <Link href={`/cases/${item.id}/edit`} className="border border-slate-300 text-slate-700 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</Link>
+                      <DeleteCaseButton caseId={item.id} caseName={item.name} onDeleted={handleCaseDeleted} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Laptop/desktop table: no forced minimum width or hidden actions. */}
+              <div className="hidden lg:block">
+                <table className="w-full table-fixed text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-500">
+                    <tr>
+                      <th className="w-[23%] px-3 xl:px-4 py-4 font-semibold">Case / ID</th>
+                      <th className="w-[22%] px-3 xl:px-4 py-4 font-semibold">Procedure</th>
+                      <th className="w-[17%] px-3 xl:px-4 py-4 font-semibold">Type</th>
+                      <th className="w-[13%] px-3 xl:px-4 py-4 font-semibold">Status</th>
+                      <th className="w-[25%] px-3 xl:px-4 py-4 font-semibold">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {recentCases.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-3 xl:px-4 py-4 align-top min-w-0">
+                          <Link href={`/cases/${item.id}`} className="block font-semibold text-slate-900 hover:text-cyan-700 break-words">{item.name}</Link>
+                          <div className="text-xs text-slate-400 mt-1 break-all">{item.id}</div>
+                        </td>
+                        <td className="px-3 xl:px-4 py-4 align-top text-slate-700 break-words">{item.procedure}</td>
+                        <td className="px-3 xl:px-4 py-4 align-top">
+                          <span className={item.type === "Navigation" ? "inline-block bg-cyan-100 text-cyan-700 px-2 py-1 rounded-full text-xs break-words" : "inline-block bg-violet-100 text-violet-700 px-2 py-1 rounded-full text-xs break-words"}>{item.type}</span>
+                        </td>
+                        <td className="px-3 xl:px-4 py-4 align-top">
+                          <span className={item.status === "Completed" ? "inline-block bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-xs" : item.status === "Cancelled" ? "inline-block bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs" : "inline-block bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs"}>● {item.status}</span>
+                        </td>
+                        <td className="px-3 xl:px-4 py-4 align-top">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link href={`/cases/${item.id}`} className="border border-cyan-300 text-cyan-700 px-2 py-2 rounded-lg hover:bg-cyan-50">View</Link>
+                            <Link href={`/cases/${item.id}/edit`} className="border border-slate-300 text-slate-700 px-2 py-2 rounded-lg hover:bg-slate-50">Edit</Link>
+                            <DeleteCaseButton caseId={item.id} caseName={item.name} onDeleted={handleCaseDeleted} />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
