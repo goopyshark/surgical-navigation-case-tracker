@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import {
@@ -21,7 +21,9 @@ export default function EditCasePage() {
     useState<SurgicalCase | null>(null);
 
   const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState("");
+  type ValidatedField = "name" | "procedure" | "region" | "type" | "date" | "duration" | "accuracy";
+  const [errors, setErrors] = useState<Partial<Record<ValidatedField, string>>>({});
+  const fieldRefs = useRef<Partial<Record<ValidatedField, HTMLInputElement | HTMLSelectElement | null>>>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -40,6 +42,13 @@ export default function EditCasePage() {
     field: keyof SurgicalCase,
     value: string
   ) {
+    if (field in errors) {
+      setErrors((previous) => {
+        const next = { ...previous };
+        delete next[field as ValidatedField];
+        return next;
+      });
+    }
     setSurgicalCase((currentCase) => {
       if (!currentCase) {
         return currentCase;
@@ -59,37 +68,31 @@ export default function EditCasePage() {
       return;
     }
 
-    setError("");
-
-    if (
-      !surgicalCase.name.trim() ||
-      !surgicalCase.procedure.trim() ||
-      !surgicalCase.region ||
-      !surgicalCase.type ||
-      !surgicalCase.date ||
-      !surgicalCase.duration
-    ) {
-      setError(
-        "Please complete the case name, procedure, region, technology type, date, and duration."
-      );
-      return;
+    const nextErrors: Partial<Record<ValidatedField, string>> = {};
+    if (!surgicalCase.name.trim()) nextErrors.name = "Case name is required.";
+    if (!surgicalCase.procedure.trim()) nextErrors.procedure = "Procedure is required.";
+    if (!surgicalCase.region) nextErrors.region = "Select a region.";
+    if (!surgicalCase.type) nextErrors.type = "Select a technology type.";
+    if (!surgicalCase.date) nextErrors.date = "Select a case date.";
+    if (!surgicalCase.duration.trim()) {
+      nextErrors.duration = "Duration is required.";
+    } else if (!Number.isFinite(Number(surgicalCase.duration)) || Number(surgicalCase.duration) <= 0) {
+      nextErrors.duration = "Duration must be greater than 0 minutes.";
+    }
+    if (surgicalCase.accuracy.trim() &&
+      (!Number.isFinite(Number(surgicalCase.accuracy)) || Number(surgicalCase.accuracy) < 0)) {
+      nextErrors.accuracy = "Accuracy must be zero or greater.";
     }
 
-    const durationNumber = Number(surgicalCase.duration);
-
-    if (
-      Number.isNaN(durationNumber) ||
-      durationNumber <= 0
-    ) {
-      setError("Duration must be greater than 0 minutes.");
-      return;
-    }
-
-    if (
-      surgicalCase.accuracy &&
-      Number(surgicalCase.accuracy) < 0
-    ) {
-      setError("Navigation accuracy cannot be negative.");
+    setErrors(nextErrors);
+    const firstInvalid = (["name", "procedure", "region", "type", "date", "duration", "accuracy"] as ValidatedField[])
+      .find((field) => nextErrors[field]);
+    if (firstInvalid) {
+      requestAnimationFrame(() => {
+        const element = fieldRefs.current[firstInvalid];
+        element?.scrollIntoView({ behavior: "smooth", block: "center" });
+        element?.focus({ preventScroll: true });
+      });
       return;
     }
 
@@ -192,11 +195,7 @@ export default function EditCasePage() {
           onSubmit={handleSubmit}
           className="mt-8 bg-white rounded-2xl shadow-sm p-5 sm:p-6 md:p-8"
         >
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
+
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -210,8 +209,14 @@ export default function EditCasePage() {
                 onChange={(event) =>
                   updateField("name", event.target.value)
                 }
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
+                ref={(element) => { fieldRefs.current.name = element; }}
+                aria-invalid={Boolean(errors.name)}
+                aria-describedby={errors.name ? "error-name" : undefined}
+                className={`w-full border ${errors.name ? "border-red-500 ring-1 ring-red-500" : "border-slate-300"} rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500`}
               />
+              {errors.name && (
+                <p id="error-name" role="alert" className="mt-2 text-sm text-red-600">{errors.name}</p>
+              )}
             </div>
 
             <div>
@@ -225,8 +230,14 @@ export default function EditCasePage() {
                 onChange={(event) =>
                   updateField("procedure", event.target.value)
                 }
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
+                ref={(element) => { fieldRefs.current.procedure = element; }}
+                aria-invalid={Boolean(errors.procedure)}
+                aria-describedby={errors.procedure ? "error-procedure" : undefined}
+                className={`w-full border ${errors.procedure ? "border-red-500 ring-1 ring-red-500" : "border-slate-300"} rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500`}
               />
+              {errors.procedure && (
+                <p id="error-procedure" role="alert" className="mt-2 text-sm text-red-600">{errors.procedure}</p>
+              )}
             </div>
 
             <div>
@@ -239,7 +250,10 @@ export default function EditCasePage() {
                 onChange={(event) =>
                   updateField("region", event.target.value)
                 }
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-cyan-500"
+                ref={(element) => { fieldRefs.current.region = element; }}
+                aria-invalid={Boolean(errors.region)}
+                aria-describedby={errors.region ? "error-region" : undefined}
+                className={`w-full border ${errors.region ? "border-red-500 ring-1 ring-red-500" : "border-slate-300"} rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-cyan-500`}
               >
                 <option>Spine</option>
                 <option>Cranial</option>
@@ -247,6 +261,9 @@ export default function EditCasePage() {
                 <option>Thoracic</option>
                 <option>Lumbar</option>
               </select>
+              {errors.region && (
+                <p id="error-region" role="alert" className="mt-2 text-sm text-red-600">{errors.region}</p>
+              )}
             </div>
 
             <div>
@@ -259,12 +276,18 @@ export default function EditCasePage() {
                 onChange={(event) =>
                   updateField("type", event.target.value)
                 }
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-cyan-500"
+                ref={(element) => { fieldRefs.current.type = element; }}
+                aria-invalid={Boolean(errors.type)}
+                aria-describedby={errors.type ? "error-type" : undefined}
+                className={`w-full border ${errors.type ? "border-red-500 ring-1 ring-red-500" : "border-slate-300"} rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-cyan-500`}
               >
                 <option>Navigation</option>
                 <option>Robotic</option>
                 <option>Navigation + Robotic</option>
               </select>
+              {errors.type && (
+                <p id="error-type" role="alert" className="mt-2 text-sm text-red-600">{errors.type}</p>
+              )}
             </div>
 
             <div>
@@ -278,8 +301,14 @@ export default function EditCasePage() {
                 onChange={(event) =>
                   updateField("date", event.target.value)
                 }
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
+                ref={(element) => { fieldRefs.current.date = element; }}
+                aria-invalid={Boolean(errors.date)}
+                aria-describedby={errors.date ? "error-date" : undefined}
+                className={`w-full border ${errors.date ? "border-red-500 ring-1 ring-red-500" : "border-slate-300"} rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500`}
               />
+              {errors.date && (
+                <p id="error-date" role="alert" className="mt-2 text-sm text-red-600">{errors.date}</p>
+              )}
             </div>
 
             <div>
@@ -294,8 +323,14 @@ export default function EditCasePage() {
                 onChange={(event) =>
                   updateField("duration", event.target.value)
                 }
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
+                ref={(element) => { fieldRefs.current.duration = element; }}
+                aria-invalid={Boolean(errors.duration)}
+                aria-describedby={errors.duration ? "error-duration" : undefined}
+                className={`w-full border ${errors.duration ? "border-red-500 ring-1 ring-red-500" : "border-slate-300"} rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500`}
               />
+              {errors.duration && (
+                <p id="error-duration" role="alert" className="mt-2 text-sm text-red-600">{errors.duration}</p>
+              )}
             </div>
 
             <div>
@@ -344,8 +379,14 @@ export default function EditCasePage() {
                 onChange={(event) =>
                   updateField("accuracy", event.target.value)
                 }
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
+                ref={(element) => { fieldRefs.current.accuracy = element; }}
+                aria-invalid={Boolean(errors.accuracy)}
+                aria-describedby={errors.accuracy ? "error-accuracy" : undefined}
+                className={`w-full border ${errors.accuracy ? "border-red-500 ring-1 ring-red-500" : "border-slate-300"} rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500`}
               />
+              {errors.accuracy && (
+                <p id="error-accuracy" role="alert" className="mt-2 text-sm text-red-600">{errors.accuracy}</p>
+              )}
             </div>
 
             <div>
@@ -399,6 +440,12 @@ export default function EditCasePage() {
               className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
             />
           </div>
+
+          {Object.keys(errors).length > 0 && (
+            <p role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              Please correct the highlighted fields before saving.
+            </p>
+          )}
 
           <div className="mt-8 flex flex-col sm:flex-row justify-end gap-3">
             <a

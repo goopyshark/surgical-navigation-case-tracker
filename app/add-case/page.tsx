@@ -34,37 +34,61 @@ export default function AddCasePage() {
   const [technicalIssues, setTechnicalIssues] = useState("");
   const [notes, setNotes] = useState("");
 
-  const [error, setError] = useState("");
+  type FieldName = "name" | "procedure" | "region" | "technologyType" | "date" | "duration" | "accuracy";
+  const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
+
+  function clearError(field: FieldName) {
+    setErrors((previous) => {
+      if (!previous[field]) return previous;
+      const updated = { ...previous };
+      delete updated[field];
+      return updated;
+    });
+  }
+
+  function fieldClass(field: FieldName) {
+    return `w-full border rounded-lg px-4 py-3 outline-none focus:ring-2 ${
+      errors[field]
+        ? "border-red-500 bg-red-50 focus:ring-red-400"
+        : "border-slate-300 focus:ring-cyan-500"
+    }`;
+  }
+
+  function fieldError(field: FieldName) {
+    return errors[field] ? (
+      <p id={`${field}-error`} role="alert" className="mt-1 text-sm text-red-700">
+        {errors[field]}
+      </p>
+    ) : null;
+  }
   const [saving, setSaving] = useState(false);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setError("");
-
-    if (
-      !name.trim() ||
-      !procedure.trim() ||
-      !region ||
-      !technologyType ||
-      !date ||
-      !duration
-    ) {
-      setError(
-        "Please complete the case name, procedure, region, technology type, date, and duration."
-      );
-      return;
+    const nextErrors: Partial<Record<FieldName, string>> = {};
+    if (!name.trim()) nextErrors.name = "Enter a case name.";
+    if (!procedure.trim()) nextErrors.procedure = "Enter a procedure.";
+    if (!region) nextErrors.region = "Select a region.";
+    if (!technologyType) nextErrors.technologyType = "Select a technology type.";
+    if (!date) nextErrors.date = "Select a case date.";
+    if (!duration.trim()) {
+      nextErrors.duration = "Enter a duration in minutes.";
+    } else if (!Number.isFinite(Number(duration)) || Number(duration) <= 0) {
+      nextErrors.duration = "Duration must be greater than 0 minutes.";
+    }
+    if (accuracy.trim() && (!Number.isFinite(Number(accuracy)) || Number(accuracy) < 0)) {
+      nextErrors.accuracy = "Navigation accuracy cannot be negative.";
     }
 
-    const durationNumber = Number(duration);
-
-    if (Number.isNaN(durationNumber) || durationNumber <= 0) {
-      setError("Duration must be greater than 0 minutes.");
-      return;
-    }
-
-    if (accuracy && Number(accuracy) < 0) {
-      setError("Navigation accuracy cannot be negative.");
+    setErrors(nextErrors);
+    const firstInvalid = (Object.keys(nextErrors) as FieldName[])[0];
+    if (firstInvalid) {
+      requestAnimationFrame(() => {
+        const input = document.getElementById(firstInvalid);
+        input?.scrollIntoView({ behavior: "smooth", block: "center" });
+        input?.focus({ preventScroll: true });
+      });
       return;
     }
 
@@ -112,12 +136,6 @@ export default function AddCasePage() {
           onSubmit={handleSubmit}
           className="mt-8 bg-white rounded-2xl shadow-sm p-5 sm:p-6 md:p-8"
         >
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block font-medium mb-2">
@@ -125,12 +143,16 @@ export default function AddCasePage() {
               </label>
 
               <input
+                id="name"
+                aria-invalid={Boolean(errors.name)}
+                aria-describedby={errors.name ? "name-error" : undefined}
                 type="text"
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => { setName(event.target.value); clearError("name"); }}
                 placeholder="Example: Scoliosis Fusion"
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
+                className={fieldClass("name")}
               />
+              {fieldError("name")}
             </div>
 
             <div>
@@ -139,12 +161,16 @@ export default function AddCasePage() {
               </label>
 
               <input
+                id="procedure"
+                aria-invalid={Boolean(errors.procedure)}
+                aria-describedby={errors.procedure ? "procedure-error" : undefined}
                 type="text"
                 value={procedure}
-                onChange={(event) => setProcedure(event.target.value)}
+                onChange={(event) => { setProcedure(event.target.value); clearError("procedure"); }}
                 placeholder="Example: Posterior Spinal Fusion"
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
+                className={fieldClass("procedure")}
               />
+              {fieldError("procedure")}
             </div>
 
             <div>
@@ -153,9 +179,12 @@ export default function AddCasePage() {
               </label>
 
               <select
+                id="region"
+                aria-invalid={Boolean(errors.region)}
+                aria-describedby={errors.region ? "region-error" : undefined}
                 value={region}
-                onChange={(event) => setRegion(event.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-cyan-500"
+                onChange={(event) => { setRegion(event.target.value); clearError("region"); }}
+                className={fieldClass("region")}
               >
                 <option value="">Select region</option>
                 <option>Spine</option>
@@ -164,6 +193,7 @@ export default function AddCasePage() {
                 <option>Thoracic</option>
                 <option>Lumbar</option>
               </select>
+              {fieldError("region")}
             </div>
 
             <div>
@@ -172,17 +202,22 @@ export default function AddCasePage() {
               </label>
 
               <select
+                id="technologyType"
+                aria-invalid={Boolean(errors.technologyType)}
+                aria-describedby={errors.technologyType ? "technologyType-error" : undefined}
                 value={technologyType}
-                onChange={(event) =>
-                  setTechnologyType(event.target.value)
-                }
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-cyan-500"
+                onChange={(event) => {
+                  setTechnologyType(event.target.value);
+                  clearError("technologyType");
+                }}
+                className={fieldClass("technologyType")}
               >
                 <option value="">Select technology</option>
                 <option>Navigation</option>
                 <option>Robotic</option>
                 <option>Navigation + Robotic</option>
               </select>
+              {fieldError("technologyType")}
             </div>
 
             <div>
@@ -191,11 +226,15 @@ export default function AddCasePage() {
               </label>
 
               <input
+                id="date"
+                aria-invalid={Boolean(errors.date)}
+                aria-describedby={errors.date ? "date-error" : undefined}
                 type="date"
                 value={date}
-                onChange={(event) => setDate(event.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
+                onChange={(event) => { setDate(event.target.value); clearError("date"); }}
+                className={fieldClass("date")}
               />
+              {fieldError("date")}
             </div>
 
             <div>
@@ -204,13 +243,17 @@ export default function AddCasePage() {
               </label>
 
               <input
+                id="duration"
+                aria-invalid={Boolean(errors.duration)}
+                aria-describedby={errors.duration ? "duration-error" : undefined}
                 type="number"
                 min="1"
                 value={duration}
-                onChange={(event) => setDuration(event.target.value)}
+                onChange={(event) => { setDuration(event.target.value); clearError("duration"); }}
                 placeholder="Example: 120"
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
+                className={fieldClass("duration")}
               />
+              {fieldError("duration")}
             </div>
 
             <div>
@@ -249,14 +292,18 @@ export default function AddCasePage() {
               </label>
 
               <input
+                id="accuracy"
+                aria-invalid={Boolean(errors.accuracy)}
+                aria-describedby={errors.accuracy ? "accuracy-error" : undefined}
                 type="number"
                 step="0.1"
                 min="0"
                 value={accuracy}
-                onChange={(event) => setAccuracy(event.target.value)}
+                onChange={(event) => { setAccuracy(event.target.value); clearError("accuracy"); }}
                 placeholder="Example: 1.2"
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
+                className={fieldClass("accuracy")}
               />
+              {fieldError("accuracy")}
             </div>
 
             <div>
