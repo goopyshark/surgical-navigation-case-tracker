@@ -1,17 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Navbar from "../../../components/Navbar";
-import {
-  getCaseById,
-  SurgicalCase,
-  updateCase,
-} from "../../../lib/caseStorage";
+import type { SurgicalCase } from "../../../lib/caseStorage";
+import { mapDatabaseCase, type DatabaseCase } from "../../../lib/caseMapper";
 
 export default function EditCasePage() {
   const params = useParams();
-  const router = useRouter();
 
   const id = Array.isArray(params.id)
     ? params.id[0]
@@ -25,17 +21,39 @@ export default function EditCasePage() {
   const [errors, setErrors] = useState<Partial<Record<ValidatedField, string>>>({});
   const fieldRefs = useRef<Partial<Record<ValidatedField, HTMLInputElement | HTMLSelectElement | null>>>({});
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     if (!id) {
       setLoaded(true);
       return;
     }
-
-    const foundCase = getCaseById(id);
-
-    setSurgicalCase(foundCase ?? null);
-    setLoaded(true);
+    const controller = new AbortController();
+    async function loadCase() {
+      try {
+        const response = await fetch(`/api/cases/${encodeURIComponent(id as string)}`, {
+          signal: controller.signal,
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error(response.status === 404 ? "Case not found." :
+            response.status === 401 ? "Please sign in again." :
+            `Unable to load case (HTTP ${response.status}).`);
+        }
+        const result: { case?: DatabaseCase } = await response.json();
+        if (!result.case) throw new Error("Invalid case response.");
+        setSurgicalCase(mapDatabaseCase(result.case));
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setLoadError(error instanceof Error ? error.message : "Unable to load case.");
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoaded(true);
+      }
+    }
+    void loadCase();
+    return () => controller.abort();
   }, [id]);
 
   function updateField(
@@ -61,12 +79,11 @@ export default function EditCasePage() {
     });
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!surgicalCase) {
-      return;
-    }
+    if (!surgicalCase || saving) return;
+    setSaveError("");
 
     const nextErrors: Partial<Record<ValidatedField, string>> = {};
     if (!surgicalCase.name.trim()) nextErrors.name = "Case name is required.";
@@ -76,7 +93,7 @@ export default function EditCasePage() {
     if (!surgicalCase.date) nextErrors.date = "Select a case date.";
     if (!surgicalCase.duration.trim()) {
       nextErrors.duration = "Duration is required.";
-    } else if (!Number.isFinite(Number(surgicalCase.duration)) || Number(surgicalCase.duration) <= 0) {
+    } else if (!Number.isSafeInteger(Number(surgicalCase.duration)) || Number(surgicalCase.duration) <= 0) {
       nextErrors.duration = "Duration must be greater than 0 minutes.";
     }
     if (surgicalCase.accuracy.trim() &&
@@ -98,24 +115,37 @@ export default function EditCasePage() {
 
     setSaving(true);
 
-    const updatedCase: SurgicalCase = {
-      ...surgicalCase,
-      name: surgicalCase.name.trim(),
-      procedure: surgicalCase.procedure.trim(),
-      systemName: surgicalCase.systemName.trim(),
-      registrationMethod:
-        surgicalCase.registrationMethod.trim(),
-      technicalIssues:
-        surgicalCase.technicalIssues.trim() ||
-        "No technical issues were reported.",
-      notes:
-        surgicalCase.notes.trim() ||
-        "No additional notes were provided.",
-    };
-
-    updateCase(updatedCase);
-
-    router.push(`/cases/${updatedCase.id}`);
+    try {
+      const response = await fetch(`/api/cases/${encodeURIComponent(surgicalCase.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: surgicalCase.name.trim(),
+          procedure: surgicalCase.procedure.trim(),
+          region: surgicalCase.region,
+          type: surgicalCase.type,
+          date: surgicalCase.date,
+          duration: surgicalCase.duration,
+          status: surgicalCase.status,
+          systemName: surgicalCase.systemName.trim(),
+          registrationMethod: surgicalCase.registrationMethod.trim(),
+          accuracy: surgicalCase.accuracy,
+          technicalIssues: surgicalCase.technicalIssues.trim() || "No technical issues were reported.",
+          notes: surgicalCase.notes.trim() || "No additional notes were provided.",
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(typeof result.error === "string" ? result.error : "Unable to save changes.");
+      }
+      if (!result.case?.id) throw new Error("Unexpected server response. Verify the record before retrying.");
+      window.location.replace(`/cases/${encodeURIComponent(result.case.id)}`);
+      return;
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Unable to save changes.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!loaded) {
@@ -153,8 +183,7 @@ export default function EditCasePage() {
             </h1>
 
             <p className="text-slate-500 mt-3">
-              The surgical case you are trying to edit could not
-              be found.
+              {loadError || "The surgical case you are trying to edit could not be found."}
             </p>
 
             <a
@@ -193,6 +222,7 @@ export default function EditCasePage() {
 
         <form
           onSubmit={handleSubmit}
+          noValidate
           className="mt-8 bg-white rounded-2xl shadow-sm p-5 sm:p-6 md:p-8"
         >
 
@@ -440,6 +470,10 @@ export default function EditCasePage() {
               className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-500"
             />
           </div>
+
+          {saveError && (
+            <p role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{saveError}</p>
+          )}
 
           {Object.keys(errors).length > 0 && (
             <p role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

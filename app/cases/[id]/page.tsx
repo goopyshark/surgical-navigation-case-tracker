@@ -3,256 +3,127 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
-import DeleteCaseButton from "../../components/DeleteCaseButton";
-import {
-  getCaseById,
-  SurgicalCase,
-} from "../../lib/caseStorage";
+import type { SurgicalCase } from "../../lib/caseStorage";
+import { mapDatabaseCase, type DatabaseCase } from "../../lib/caseMapper";
 
 export default function CaseDetailsPage() {
   const params = useParams();
-
-  const id = Array.isArray(params.id)
-    ? params.id[0]
-    : params.id;
-
-  const [surgicalCase, setSurgicalCase] =
-    useState<SurgicalCase | null>(null);
-
-  const [loaded, setLoaded] = useState(false);
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const [surgicalCase, setSurgicalCase] = useState<SurgicalCase | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!id) {
-      setLoaded(true);
-      return;
+    const controller = new AbortController();
+    async function loadCase() {
+      setLoading(true);
+      setError("");
+      setSurgicalCase(null);
+      if (!id) { setError("Missing case ID."); setLoading(false); return; }
+      try {
+        const response = await fetch(`/api/cases/${encodeURIComponent(id)}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (response.status === 404) { setLoading(false); return; }
+        if (!response.ok) {
+          setError(response.status === 401
+            ? "Your session has expired. Please sign in again."
+            : "Unable to load case details. Please try again.");
+          return;
+        }
+        const result: { case: DatabaseCase } = await response.json();
+        if (!controller.signal.aborted) setSurgicalCase(mapDatabaseCase(result.case));
+      } catch (cause) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to load case:", cause);
+          setError("Unable to connect to the server. Please try again.");
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
     }
-
-    const foundCase = getCaseById(id);
-
-    setSurgicalCase(foundCase ?? null);
-    setLoaded(true);
+    void loadCase();
+    return () => controller.abort();
   }, [id]);
 
-  if (!loaded) {
-    return (
-      <main className="min-h-screen bg-slate-100 text-slate-900">
-        <Navbar />
+  const shell = (content: React.ReactNode) => (
+    <main className="min-h-screen bg-slate-100 text-slate-900">
+      <Navbar />
+      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{content}</section>
+    </main>
+  );
 
-        <section className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
-            <p className="text-slate-500">Loading case details...</p>
-          </div>
-        </section>
-      </main>
-    );
-  }
+  if (loading) return shell(
+    <div className="rounded-2xl bg-white p-8 text-center shadow-sm text-slate-500">Loading case details...</div>
+  );
 
-  if (!surgicalCase) {
-    return (
-      <main className="min-h-screen bg-slate-100 text-slate-900">
-        <Navbar />
-
-        <section className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-          <a
-            href="/cases"
-            className="text-cyan-700 font-medium hover:underline"
-          >
-            ← Back to Cases
-          </a>
-
-          <div className="mt-6 bg-white rounded-2xl shadow-sm p-8 text-center">
-            <h1 className="text-2xl font-bold text-slate-900">
-              Case Not Found
-            </h1>
-
-            <p className="text-slate-500 mt-3">
-              The requested surgical case could not be found.
-            </p>
-
-            <a
-              href="/cases"
-              className="inline-block mt-6 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-lg font-semibold"
-            >
-              Return to Cases
-            </a>
-          </div>
-        </section>
-      </main>
-    );
-  }
+  if (error || !surgicalCase) return shell(
+    <>
+      <a href="/cases" className="font-medium text-cyan-700 hover:underline">← Back to Cases</a>
+      <div className="mt-6 rounded-2xl bg-white p-8 text-center shadow-sm">
+        <h1 className="text-2xl font-bold">{error ? "Unable to Load Case" : "Case Not Found"}</h1>
+        <p className="mt-3 text-slate-500">{error || "The requested surgical case could not be found."}</p>
+        <a href="/cases" className="mt-6 inline-block rounded-lg bg-cyan-600 px-6 py-3 font-semibold text-white hover:bg-cyan-700">Return to Cases</a>
+      </div>
+    </>
+  );
 
   function formatDate(date: string) {
-    if (!date) {
-      return "Not specified";
-    }
-
-    const parsedDate = new Date(`${date}T00:00:00`);
-
-    return parsedDate.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
+    if (!date) return "Not specified";
+    return new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
+      month: "long", day: "numeric", year: "numeric",
     });
   }
 
-  return (
-    <main className="min-h-screen bg-slate-100 text-slate-900">
-      <Navbar />
-
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <a
-          href="/cases"
-          className="text-cyan-700 font-medium hover:underline"
-        >
-          ← Back to Cases
-        </a>
-
-        <div className="mt-5 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold border-l-4 border-cyan-500 pl-4">
-              {surgicalCase.name}
-            </h1>
-
-            <p className="text-slate-500 mt-3">
-              Case ID: {surgicalCase.id}
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            <a
-              href={`/cases/${surgicalCase.id}/edit`}
-              className="border border-slate-300 bg-white hover:bg-slate-50 px-5 py-3 rounded-lg font-medium text-center"
-            >
-              Edit Case
-            </a>
-
-            <DeleteCaseButton
-              caseId={surgicalCase.id}
-              caseName={surgicalCase.name}
-            />
-          </div>
+  return shell(
+    <>
+      <a href="/cases" className="font-medium text-cyan-700 hover:underline">← Back to Cases</a>
+      <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h1 className="border-l-4 border-cyan-500 pl-4 text-3xl font-bold md:text-4xl">{surgicalCase.name}</h1>
+          <p className="mt-3 break-all text-slate-500">Case ID: {surgicalCase.id}</p>
         </div>
-
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Procedure Information */}
-          <section className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-bold mb-5">
-              Procedure Information
-            </h2>
-
-            <DetailRow
-              label="Procedure"
-              value={surgicalCase.procedure}
-            />
-
-            <DetailRow
-              label="Region"
-              value={surgicalCase.region}
-            />
-
-            <DetailRow
-              label="Case Date"
-              value={formatDate(surgicalCase.date)}
-            />
-
-            <DetailRow
-              label="Duration"
-              value={`${surgicalCase.duration} min`}
-            />
-
-            <DetailRow
-              label="Status"
-              value={surgicalCase.status}
-            />
-          </section>
-
-          {/* Navigation / Robotics Information */}
-          <section className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-bold mb-5">
-              Navigation / Robotics Information
-            </h2>
-
-            <DetailRow
-              label="Technology Type"
-              value={surgicalCase.type}
-            />
-
-            <DetailRow
-              label="System Name"
-              value={
-                surgicalCase.systemName ||
-                "Not specified"
-              }
-            />
-
-            <DetailRow
-              label="Registration Method"
-              value={
-                surgicalCase.registrationMethod ||
-                "Not specified"
-              }
-            />
-
-            <DetailRow
-              label="Navigation Accuracy"
-              value={
-                surgicalCase.accuracy
-                  ? `${surgicalCase.accuracy} mm`
-                  : "Not specified"
-              }
-            />
-          </section>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button disabled title="Database editing is coming next" className="cursor-not-allowed rounded-lg border border-slate-300 bg-slate-100 px-5 py-3 text-center font-medium text-slate-400">Edit Case (coming soon)</button>
+          <button disabled title="Database deletion is coming next" className="cursor-not-allowed rounded-lg border border-slate-300 bg-slate-100 px-5 py-3 text-center font-medium text-slate-400">Delete (coming soon)</button>
         </div>
-
-        {/* Technical Issues */}
-        <section className="mt-6 bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="text-xl font-bold mb-3">
-            Technical Issues
-          </h2>
-
-          <p className="text-slate-600 leading-7">
-            {surgicalCase.technicalIssues ||
-              "No technical issues were reported."}
-          </p>
+      </div>
+      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="mb-5 text-xl font-bold">Procedure Information</h2>
+          <DetailRow label="Procedure" value={surgicalCase.procedure} />
+          <DetailRow label="Region" value={surgicalCase.region} />
+          <DetailRow label="Case Date" value={formatDate(surgicalCase.date)} />
+          <DetailRow label="Duration" value={`${surgicalCase.duration} min`} />
+          <DetailRow label="Status" value={surgicalCase.status} />
         </section>
-
-        {/* Notes */}
-        <section className="mt-6 bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="text-xl font-bold mb-3">
-            Notes
-          </h2>
-
-          <p className="text-slate-600 leading-7">
-            {surgicalCase.notes ||
-              "No additional notes were provided."}
-          </p>
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="mb-5 text-xl font-bold">Navigation / Robotics Information</h2>
+          <DetailRow label="Technology Type" value={surgicalCase.type} />
+          <DetailRow label="System Name" value={surgicalCase.systemName || "Not specified"} />
+          <DetailRow label="Registration Method" value={surgicalCase.registrationMethod || "Not specified"} />
+          <DetailRow label="Navigation Accuracy" value={surgicalCase.accuracy !== "" ? `${surgicalCase.accuracy} mm` : "Not specified"} />
         </section>
-
-        <footer className="text-xs text-slate-400 mt-8 pb-6">
-          SNCT • For educational and simulation use only • Not for clinical
-          decision-making
-        </footer>
+      </div>
+      <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+        <h2 className="mb-3 text-xl font-bold">Technical Issues</h2>
+        <p className="whitespace-pre-wrap leading-7 text-slate-600">{surgicalCase.technicalIssues || "No technical issues were reported."}</p>
       </section>
-    </main>
+      <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+        <h2 className="mb-3 text-xl font-bold">Notes</h2>
+        <p className="whitespace-pre-wrap leading-7 text-slate-600">{surgicalCase.notes || "No additional notes were provided."}</p>
+      </section>
+      <footer className="mt-8 pb-6 text-xs text-slate-400">SNCT • For educational and simulation use only • Not for clinical decision-making</footer>
+    </>
   );
 }
 
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="py-3 border-b border-slate-100 last:border-b-0">
-      <div className="text-sm text-slate-400">
-        {label}
-      </div>
-
-      <div className="font-medium mt-1">
-        {value}
-      </div>
+    <div className="border-b border-slate-100 py-3 last:border-b-0">
+      <div className="text-sm text-slate-400">{label}</div>
+      <div className="mt-1 font-medium">{value}</div>
     </div>
   );
 }

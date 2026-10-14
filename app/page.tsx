@@ -3,20 +3,67 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "./components/Navbar";
-import DeleteCaseButton from "./components/DeleteCaseButton";
-import {
-  getCases,
-  SurgicalCase,
-} from "./lib/caseStorage";
+import type { SurgicalCase } from "./lib/caseStorage";
+import { mapDatabaseCase, type DatabaseCase } from "./lib/caseMapper";
 
 export default function Home() {
   const [cases, setCases] = useState<SurgicalCase[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    setCases(getCases());
-    setLoaded(true);
+    const controller = new AbortController();
+    async function loadCases() {
+      try {
+        const response = await fetch("/api/cases", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error(response.status === 401
+            ? "Please sign in to view dashboard cases."
+            : `Unable to load dashboard cases (HTTP ${response.status}).`);
+        }
+        const result: { cases?: DatabaseCase[] } = await response.json();
+        if (!Array.isArray(result.cases)) {
+          throw new Error("The server returned an unexpected response.");
+        }
+        setCases(result.cases.map(mapDatabaseCase));
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setLoadError(error instanceof Error ? error.message : "Unable to load cases.");
+      } finally {
+        if (!controller.signal.aborted) setLoaded(true);
+      }
+    }
+    void loadCases();
+    return () => controller.abort();
   }, []);
+
+  async function deleteCase(id: string, name: string) {
+    if (deletingId) return;
+    if (!window.confirm(`Permanently delete "${name}"? This cannot be undone.`)) return;
+
+    setDeleteError("");
+    setDeletingId(id);
+    try {
+      const response = await fetch(`/api/cases/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const result: { success?: boolean; deletedId?: string; error?: string } =
+        await response.json();
+      if (!response.ok || !result.success || result.deletedId !== id) {
+        throw new Error(result.error || "Unable to delete case.");
+      }
+      setCases((current) => current.filter((item) => item.id !== id));
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Unable to delete case.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const totalCases = cases.length;
 
@@ -66,14 +113,6 @@ export default function Home() {
     });
   }
 
-  function handleCaseDeleted(caseId: string) {
-    setCases((currentCases) =>
-      currentCases.filter(
-        (surgicalCase) => surgicalCase.id !== caseId
-      )
-    );
-  }
-
   return (
     <main className="min-h-screen bg-slate-50">
       <Navbar />
@@ -112,7 +151,7 @@ export default function Home() {
             </p>
 
             <p className="text-3xl font-bold text-slate-900">
-              {loaded ? totalCases : "—"}
+              {loaded && !loadError ? totalCases : "—"}
             </p>
 
             <p className="text-sm text-slate-500 mt-2">
@@ -126,7 +165,7 @@ export default function Home() {
             </p>
 
             <p className="text-3xl font-bold text-cyan-600">
-              {loaded ? navigationCases : "—"}
+              {loaded && !loadError ? navigationCases : "—"}
             </p>
 
             <p className="text-sm text-slate-500 mt-2">
@@ -140,7 +179,7 @@ export default function Home() {
             </p>
 
             <p className="text-3xl font-bold text-slate-900">
-              {loaded ? roboticCases : "—"}
+              {loaded && !loadError ? roboticCases : "—"}
             </p>
 
             <p className="text-sm text-slate-500 mt-2">
@@ -154,7 +193,7 @@ export default function Home() {
             </p>
 
             <p className="text-3xl font-bold text-slate-900">
-              {loaded ? `${averageDuration} min` : "—"}
+              {loaded && !loadError ? `${averageDuration} min` : "—"}
             </p>
 
             <p className="text-sm text-slate-500 mt-2">
@@ -162,6 +201,12 @@ export default function Home() {
             </p>
           </div>
         </div>
+
+        {deleteError && (
+          <p role="alert" className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {deleteError}
+          </p>
+        )}
 
         {/* Recent Cases */}
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -187,6 +232,10 @@ export default function Home() {
           {!loaded ? (
             <div className="px-6 py-12 text-center text-slate-500">
               Loading cases...
+            </div>
+          ) : loadError ? (
+            <div role="alert" className="px-6 py-12 text-center text-red-700">
+              {loadError} <Link href="/login?next=%2F" className="underline">Sign in</Link>
             </div>
           ) : recentCases.length === 0 ? (
             <div className="px-6 py-12 text-center">
@@ -227,7 +276,14 @@ export default function Home() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Link href={`/cases/${item.id}`} className="border border-cyan-300 text-cyan-700 px-3 py-2 rounded-lg hover:bg-cyan-50">View</Link>
                       <Link href={`/cases/${item.id}/edit`} className="border border-slate-300 text-slate-700 px-3 py-2 rounded-lg hover:bg-slate-50">Edit</Link>
-                      <DeleteCaseButton caseId={item.id} caseName={item.name} onDeleted={handleCaseDeleted} />
+                      <button
+                         type="button"
+                         onClick={() => void deleteCase(item.id, item.name)}
+                         disabled={deletingId !== null}
+                         className="border border-red-300 text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 disabled:opacity-50"
+                       >
+                         {deletingId === item.id ? "Deleting..." : "Delete"}
+                       </button>
                     </div>
                   </div>
                 ))}
@@ -262,7 +318,14 @@ export default function Home() {
                           <div className="flex flex-wrap items-center gap-2">
                             <Link href={`/cases/${item.id}`} className="border border-cyan-300 text-cyan-700 px-2 py-2 rounded-lg hover:bg-cyan-50">View</Link>
                             <Link href={`/cases/${item.id}/edit`} className="border border-slate-300 text-slate-700 px-2 py-2 rounded-lg hover:bg-slate-50">Edit</Link>
-                            <DeleteCaseButton caseId={item.id} caseName={item.name} onDeleted={handleCaseDeleted} />
+                            <button
+                               type="button"
+                               onClick={() => void deleteCase(item.id, item.name)}
+                               disabled={deletingId !== null}
+                               className="border border-red-300 text-red-700 px-2 py-2 rounded-lg hover:bg-red-50 disabled:opacity-50"
+                             >
+                               {deletingId === item.id ? "Deleting..." : "Delete"}
+                             </button>
                           </div>
                         </td>
                       </tr>
