@@ -181,7 +181,9 @@ export async function PATCH(
       );
     }
 
-    const { data, error } = await getSupabaseServer()
+    const supabase = getSupabaseServer();
+
+    const { data, error } = await supabase
       .from("surgical_cases")
       .update({
         name: (input.name as string).trim(),
@@ -220,7 +222,27 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json({ case: data });
+    // WEEK 6: Log successful case updates.
+    const { error: activityError } = await supabase
+      .from("case_activity_log")
+      .insert({
+        case_id: data.id,
+        case_name: data.name,
+        action: "UPDATED",
+        description: `Surgical case "${data.name}" was updated.`,
+      });
+
+    if (activityError) {
+      console.error(
+        "Case update activity logging failed:",
+        activityError.message
+      );
+    }
+
+    return NextResponse.json({
+      case: data,
+      activityLogged: !activityError,
+    });
   } catch (error) {
     console.error("Update case API error:", error);
 
@@ -237,7 +259,6 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Only authorized admins can delete cases.
     const admin = await requireAdmin();
 
     if (!admin.authorized) {
@@ -256,11 +277,14 @@ export async function DELETE(
       );
     }
 
-    const { data, error } = await getSupabaseServer()
+    const supabase = getSupabaseServer();
+
+    // Return the case name before the record is removed.
+    const { data, error } = await supabase
       .from("surgical_cases")
       .delete()
       .eq("id", id)
-      .select("id")
+      .select("id, name")
       .maybeSingle();
 
     if (error) {
@@ -282,9 +306,27 @@ export async function DELETE(
       );
     }
 
+    // WEEK 6: Preserve deletion history in a separate table.
+    const { error: activityError } = await supabase
+      .from("case_activity_log")
+      .insert({
+        case_id: data.id,
+        case_name: data.name,
+        action: "DELETED",
+        description: `Surgical case "${data.name}" was deleted.`,
+      });
+
+    if (activityError) {
+      console.error(
+        "Case deletion activity logging failed:",
+        activityError.message
+      );
+    }
+
     return NextResponse.json({
       success: true,
       deletedId: data.id,
+      activityLogged: !activityError,
     });
   } catch (error) {
     console.error("Delete case API error:", error);

@@ -180,8 +180,28 @@ export async function POST(request: Request) {
       );
     }
 
+    // WEEK 6: Record case creation in the activity log.
+    const { error: activityError } = await supabase
+      .from("case_activity_log")
+      .insert({
+        case_id: data.id,
+        case_name: data.name,
+        action: "CREATED",
+        description: `Surgical case "${data.name}" was created.`,
+      });
+
+    if (activityError) {
+      console.error(
+        "Case activity logging failed:",
+        activityError.message
+      );
+    }
+
     return NextResponse.json(
-      { case: data },
+      {
+        case: data,
+        activityLogged: !activityError,
+      },
       { status: 201 }
     );
   } catch (error) {

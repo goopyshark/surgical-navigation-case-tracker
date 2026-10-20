@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -9,42 +11,49 @@ export default function Navbar() {
     <nav className="bg-slate-950 text-white">
       <div className="px-6 md:px-8 py-4 flex items-center justify-between">
         {/* Logo */}
-        <a href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3">
           <div className="bg-cyan-500 rounded-xl w-10 h-10 flex items-center justify-center font-bold">
             +
           </div>
           <span className="text-2xl font-bold">SNCT</span>
-        </a>
+        </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-8 text-sm">
-          <a
+        <div className="hidden md:flex items-center gap-6 text-sm">
+          <Link
             href="/"
             className="hover:text-cyan-400 transition-colors"
           >
             Dashboard
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/cases"
             className="hover:text-cyan-400 transition-colors"
           >
             Cases
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/add-case"
             className="hover:text-cyan-400 transition-colors"
           >
             Add Case
-          </a>
+          </Link>
 
-          <a
+          <Link
+            href="/activity"
+            className="hover:text-cyan-400 transition-colors"
+          >
+            Activity History
+          </Link>
+
+          <Link
             href="/about"
             className="hover:text-cyan-400 transition-colors"
           >
             About
-          </a>
+          </Link>
 
           <span className="text-slate-400">Logout</span>
         </div>
@@ -69,33 +78,40 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden border-t border-slate-800 px-6 py-4">
           <div className="flex flex-col gap-2">
-            <a
+            <Link
               href="/"
               className="px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-cyan-400"
             >
               Dashboard
-            </a>
+            </Link>
 
-            <a
+            <Link
               href="/cases"
               className="px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-cyan-400"
             >
               Cases
-            </a>
+            </Link>
 
-            <a
+            <Link
               href="/add-case"
               className="px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-cyan-400"
             >
               Add Case
-            </a>
+            </Link>
 
-            <a
+            <Link
+              href="/activity"
+              className="px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-cyan-400"
+            >
+              Activity History
+            </Link>
+
+            <Link
               href="/about"
               className="px-4 py-3 rounded-lg hover:bg-slate-800 hover:text-cyan-400"
             >
               About
-            </a>
+            </Link>
 
             <div className="px-4 py-3 text-slate-500">
               Logout
