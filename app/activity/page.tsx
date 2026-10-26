@@ -5,36 +5,61 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 
+type ActivityAction = "CREATED" | "UPDATED" | "DELETED";
+type ActivityFilter = "ALL" | ActivityAction;
+
 type Activity = {
   id: string;
   case_id: string;
   case_name: string;
-  action: "CREATED" | "UPDATED" | "DELETED";
+  action: ActivityAction;
   description: string | null;
   performed_at: string;
 };
 
+const filters: { label: string; value: ActivityFilter }[] = [
+  { label: "All Activities", value: "ALL" },
+  { label: "Created", value: "CREATED" },
+  { label: "Updated", value: "UPDATED" },
+  { label: "Deleted", value: "DELETED" },
+];
+
 export default function ActivityPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [filter, setFilter] = useState<ActivityFilter>("ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [unauthorized, setUnauthorized] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
 
     async function loadActivities() {
+      setLoading(true);
+      setError("");
+      setUnauthorized(false);
+      setActivities([]);
+
       try {
-        const response = await fetch("/api/activity", {
+        const url =
+          filter === "ALL"
+            ? "/api/activity"
+            : `/api/activity?action=${filter}`;
+
+        const response = await fetch(url, {
           cache: "no-store",
           signal: controller.signal,
         });
 
         if (!response.ok) {
-          throw new Error(
-            response.status === 401
-              ? "Please sign in to view activity history."
-              : "Unable to load activity history."
-          );
+          if (response.status === 401) {
+            setUnauthorized(true);
+            throw new Error(
+              "Please sign in to view activity history."
+            );
+          }
+
+          throw new Error("Unable to load activity history.");
         }
 
         const result: { activities?: Activity[] } =
@@ -65,7 +90,7 @@ export default function ActivityPage() {
     void loadActivities();
 
     return () => controller.abort();
-  }, []);
+  }, [filter]);
 
   function formatDate(value: string) {
     const date = new Date(value);
@@ -83,7 +108,7 @@ export default function ActivityPage() {
     });
   }
 
-  function actionStyles(action: Activity["action"]) {
+  function actionStyles(action: ActivityAction) {
     switch (action) {
       case "CREATED":
         return "bg-emerald-100 text-emerald-800";
@@ -91,9 +116,15 @@ export default function ActivityPage() {
         return "bg-cyan-100 text-cyan-800";
       case "DELETED":
         return "bg-red-100 text-red-800";
-      default:
-        return "bg-slate-100 text-slate-700";
     }
+  }
+
+  function filterStyles(value: ActivityFilter) {
+    if (filter === value) {
+      return "bg-cyan-600 text-white border-cyan-600 shadow-sm";
+    }
+
+    return "bg-white text-slate-700 border-slate-200 hover:bg-slate-100";
   }
 
   return (
@@ -133,10 +164,49 @@ export default function ActivityPage() {
             <p className="text-sm text-slate-500 mt-1">
               Showing up to 100 recent activity records
             </p>
+
+            {/* Activity filter buttons */}
+            <div
+              className="flex flex-wrap gap-2 mt-5"
+              role="group"
+              aria-label="Filter activity history"
+            >
+              {filters.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setFilter(option.value)}
+                  aria-pressed={filter === option.value}
+                  className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${filterStyles(option.value)}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            <p
+              className="text-xs text-slate-500 mt-4"
+              aria-live="polite"
+            >
+              {loading
+                ? "Loading records..."
+                : error
+                  ? "Unable to display records."
+                  : `Showing ${activities.length} ${
+                      filter === "ALL"
+                        ? "recent activity"
+                        : filter.toLowerCase()
+                    } record${
+                      activities.length === 1 ? "" : "s"
+                    }`}
+            </p>
           </div>
 
           {loading ? (
-            <div className="px-6 py-12 text-center text-slate-500">
+            <div
+              className="px-6 py-12 text-center text-slate-500"
+              role="status"
+            >
               Loading activity history...
             </div>
           ) : error ? (
@@ -146,16 +216,20 @@ export default function ActivityPage() {
             >
               <p>{error}</p>
 
-              <Link
-                href="/login?next=%2Factivity"
-                className="inline-block mt-3 underline"
-              >
-                Sign in
-              </Link>
+              {unauthorized && (
+                <Link
+                  href="/login?next=%2Factivity"
+                  className="inline-block mt-3 underline"
+                >
+                  Sign in
+                </Link>
+              )}
             </div>
           ) : activities.length === 0 ? (
             <div className="px-6 py-12 text-center text-slate-500">
-              No activity has been recorded yet.
+              {filter === "ALL"
+                ? "No activity has been recorded yet."
+                : `No ${filter.toLowerCase()} activity records found.`}
             </div>
           ) : (
             <>
@@ -183,7 +257,8 @@ export default function ActivityPage() {
                     </h3>
 
                     <p className="text-sm text-slate-600 break-words">
-                      {activity.description || "No description provided."}
+                      {activity.description ||
+                        "No description provided."}
                     </p>
 
                     <p className="text-xs text-slate-400 break-all">
@@ -227,6 +302,7 @@ export default function ActivityPage() {
                           <p className="font-semibold text-slate-900 break-words">
                             {activity.case_name}
                           </p>
+
                           <p className="text-xs text-slate-400 mt-1 break-all">
                             {activity.case_id}
                           </p>
@@ -241,7 +317,8 @@ export default function ActivityPage() {
                         </td>
 
                         <td className="px-5 py-4 align-top text-slate-600 break-words">
-                          {activity.description || "No description provided."}
+                          {activity.description ||
+                            "No description provided."}
                         </td>
                       </tr>
                     ))}
