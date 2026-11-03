@@ -5,8 +5,16 @@ import { getSupabaseServer } from "../../lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
-// GET - Retrieve surgical case activity history
-// Optional filter: ?action=CREATED, UPDATED, or DELETED
+const ALLOWED_ACTIONS = [
+  "CREATED",
+  "UPDATED",
+  "DELETED",
+] as const;
+
+const ACTIVITY_LIMIT = 100;
+
+// GET - Retrieve surgical case activity history.
+// Optional filter: ?action=CREATED, UPDATED, or DELETED.
 export async function GET(request: NextRequest) {
   try {
     // Verify that the user is authenticated.
@@ -24,13 +32,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Read the optional action filter.
+    // Read the optional activity filter.
     const action = request.nextUrl.searchParams.get("action");
 
-    const allowedActions = ["CREATED", "UPDATED", "DELETED"];
-
-    // Reject unsupported action values.
-    if (action !== null && !allowedActions.includes(action)) {
+    // Reject unsupported filter values.
+    if (
+      action !== null &&
+      !ALLOWED_ACTIONS.some(
+        (allowedAction) => allowedAction === action
+      )
+    ) {
       return NextResponse.json(
         {
           error:
@@ -40,7 +51,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Retrieve activity records from Supabase.
+    // Connect to Supabase.
     const supabase = getSupabaseServer();
 
     let query = supabase
@@ -49,14 +60,18 @@ export async function GET(request: NextRequest) {
         "id, case_id, case_name, action, description, performed_at"
       );
 
-    // Apply filtering at the database level.
+    // Apply filtering directly in the database.
     if (action !== null) {
       query = query.eq("action", action);
     }
 
+    // Retrieve the most recent matching activities.
+    // Use ID as a secondary sort for consistent ordering
+    // when timestamps are identical.
     const { data, error } = await query
       .order("performed_at", { ascending: false })
-      .limit(100);
+      .order("id", { ascending: false })
+      .limit(ACTIVITY_LIMIT);
 
     if (error) {
       console.error(

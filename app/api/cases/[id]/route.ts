@@ -1,84 +1,91 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServer } from "../../../lib/supabaseServer";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { getSupabaseAuthServer } from "../../../lib/supabaseAuthServer";
 import { requireAdmin } from "../../../lib/requireAdmin";
+
+export const dynamic = "force-dynamic";
+
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
 
 // GET - Load one surgical case
 export async function GET(
   _request: Request,
-  context: { params: Promise<{ id: string }> }
+  context: RouteContext
 ) {
-  const cookieStore = await cookies();
+  try {
+    // Verify authentication.
+    const auth = await getSupabaseAuthServer();
 
-  const supabaseAuth = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll() {
-          // Authentication cookies are refreshed by proxy.ts.
-        },
-      },
+    const {
+      data: { user },
+      error: authError,
+    } = await auth.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please sign in." },
+        { status: 401 }
+      );
     }
-  );
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabaseAuth.auth.getUser();
+    const { id } = await context.params;
 
-  if (authError || !user) {
+    if (!id.trim()) {
+      return NextResponse.json(
+        { error: "Missing case ID." },
+        { status: 400 }
+      );
+    }
+
+    // Retrieve the requested case.
+    const supabase = getSupabaseServer();
+
+    const { data, error } = await supabase
+      .from("surgical_cases")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        "Supabase case lookup failed:",
+        error.message
+      );
+
+      return NextResponse.json(
+        { error: "Unable to load case." },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { error: "Case not found." },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ case: data });
+  } catch (error) {
+    console.error("Get case API error:", error);
+
     return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
-
-  const { id } = await context.params;
-
-  if (!id) {
-    return NextResponse.json(
-      { error: "Missing case ID" },
-      { status: 400 }
-    );
-  }
-
-  const { data, error } = await getSupabaseServer()
-    .from("surgical_cases")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Supabase case lookup failed:", error.message);
-
-    return NextResponse.json(
-      { error: "Unable to load case" },
+      { error: "Unable to load case." },
       { status: 500 }
     );
   }
-
-  if (!data) {
-    return NextResponse.json(
-      { error: "Case not found" },
-      { status: 404 }
-    );
-  }
-
-  return NextResponse.json({ case: data });
 }
 
 // PATCH - Update an existing surgical case
 export async function PATCH(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  context: RouteContext
 ) {
   try {
+    // Only the configured administrator may update cases.
     const admin = await requireAdmin();
 
     if (!admin.authorized) {
@@ -90,13 +97,14 @@ export async function PATCH(
 
     const { id } = await context.params;
 
-    if (!id) {
+    if (!id.trim()) {
       return NextResponse.json(
         { error: "Missing case ID." },
         { status: 400 }
       );
     }
 
+    // Parse request JSON.
     let body: unknown;
 
     try {
@@ -108,7 +116,11 @@ export async function PATCH(
       );
     }
 
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
+    if (
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body)
+    ) {
       return NextResponse.json(
         { error: "Invalid case data." },
         { status: 400 }
@@ -117,7 +129,8 @@ export async function PATCH(
 
     const input = body as Record<string, unknown>;
 
-    for (const field of [
+    // Validate required fields.
+    const requiredFields = [
       "name",
       "procedure",
       "region",
@@ -125,7 +138,9 @@ export async function PATCH(
       "date",
       "duration",
       "status",
-    ]) {
+    ];
+
+    for (const field of requiredFields) {
       if (
         typeof input[field] !== "string" ||
         !(input[field] as string).trim()
@@ -137,15 +152,29 @@ export async function PATCH(
       }
     }
 
-    const duration = Number(input.duration);
+    // WEEK 8: Consistent duration validation.
+    // No arbitrary maximum duration.
+    const durationInput = input.duration;
 
-    if (!Number.isSafeInteger(duration) || duration <= 0) {
+    const duration =
+      typeof durationInput === "string" &&
+      /^\d+$/.test(durationInput.trim())
+        ? Number(durationInput.trim())
+        : NaN;
+
+    if (
+      !Number.isSafeInteger(duration) ||
+      duration <= 0
+    ) {
       return NextResponse.json(
-        { error: "Duration must be a positive whole number." },
+        {
+          error: "Duration must be a positive whole number.",
+        },
         { status: 400 }
       );
     }
 
+    // Validate the surgical case date.
     const date = input.date as string;
 
     if (
@@ -161,26 +190,36 @@ export async function PATCH(
       );
     }
 
-    const optionalText = (field: string) =>
-      typeof input[field] === "string"
-        ? (input[field] as string).trim()
-        : "";
+    // Normalize optional fields.
+    const optionalText = (field: string) => {
+      const value = input[field];
 
+      return typeof value === "string"
+        ? value.trim()
+        : "";
+    };
+
+    // Validate accuracy.
     const accuracyText = optionalText("accuracy");
 
     const accuracy =
-      accuracyText === "" ? null : Number(accuracyText);
+      accuracyText === ""
+        ? null
+        : Number(accuracyText);
 
     if (
       accuracy !== null &&
       (!Number.isFinite(accuracy) || accuracy < 0)
     ) {
       return NextResponse.json(
-        { error: "Accuracy must be a non-negative number." },
+        {
+          error: "Accuracy must be a non-negative number.",
+        },
         { status: 400 }
       );
     }
 
+    // Update the case in Supabase.
     const supabase = getSupabaseServer();
 
     const { data, error } = await supabase
@@ -194,9 +233,13 @@ export async function PATCH(
         duration,
         status: (input.status as string).trim(),
         system_name: optionalText("systemName"),
-        registration_method: optionalText("registrationMethod"),
+        registration_method: optionalText(
+          "registrationMethod"
+        ),
         accuracy,
-        technical_issues: optionalText("technicalIssues"),
+        technical_issues: optionalText(
+          "technicalIssues"
+        ),
         notes: optionalText("notes"),
       })
       .eq("id", id)
@@ -222,14 +265,15 @@ export async function PATCH(
       );
     }
 
-    // WEEK 6: Log successful case updates.
+    // Record successful updates in Activity History.
     const { error: activityError } = await supabase
       .from("case_activity_log")
       .insert({
         case_id: data.id,
         case_name: data.name,
         action: "UPDATED",
-        description: `Surgical case "${data.name}" was updated.`,
+        description:
+          `Surgical case "${data.name}" was updated.`,
       });
 
     if (activityError) {
@@ -256,9 +300,10 @@ export async function PATCH(
 // DELETE - Permanently delete a surgical case
 export async function DELETE(
   _request: Request,
-  context: { params: Promise<{ id: string }> }
+  context: RouteContext
 ) {
   try {
+    // Only the configured administrator may delete cases.
     const admin = await requireAdmin();
 
     if (!admin.authorized) {
@@ -270,7 +315,7 @@ export async function DELETE(
 
     const { id } = await context.params;
 
-    if (!id) {
+    if (!id.trim()) {
       return NextResponse.json(
         { error: "Missing case ID." },
         { status: 400 }
@@ -279,7 +324,7 @@ export async function DELETE(
 
     const supabase = getSupabaseServer();
 
-    // Return the case name before the record is removed.
+    // Delete the case and retrieve its name for logging.
     const { data, error } = await supabase
       .from("surgical_cases")
       .delete()
@@ -306,14 +351,15 @@ export async function DELETE(
       );
     }
 
-    // WEEK 6: Preserve deletion history in a separate table.
+    // Preserve deletion history in the activity log.
     const { error: activityError } = await supabase
       .from("case_activity_log")
       .insert({
         case_id: data.id,
         case_name: data.name,
         action: "DELETED",
-        description: `Surgical case "${data.name}" was deleted.`,
+        description:
+          `Surgical case "${data.name}" was deleted.`,
       });
 
     if (activityError) {
