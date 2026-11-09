@@ -2,17 +2,21 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowser } from "../lib/supabaseBrowser";
 
 export default function LoginPage() {
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
     setError("");
     setLoading(true);
@@ -20,18 +24,50 @@ export default function LoginPage() {
     try {
       const supabase = getSupabaseBrowser();
 
-      const { error: loginError } =
+      const { data, error: loginError } =
         await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
 
-      if (loginError) {
-        setError(loginError.message);
+      if (loginError || !data.user) {
+        setError(
+          loginError?.message ??
+            "Unable to sign in. Please try again."
+        );
         return;
       }
 
-      const params = new URLSearchParams(window.location.search);
+      // Check the user's account approval status.
+      const { data: profile, error: profileError } =
+        await supabase
+          .from("user_profiles")
+          .select("approval_status")
+          .eq("id", data.user.id)
+          .maybeSingle();
+
+      if (profileError) {
+        setError(
+          "Unable to verify account status. Please try again."
+        );
+        await supabase.auth.signOut();
+        return;
+      }
+
+      if (
+        !profile ||
+        profile.approval_status !== "approved"
+      ) {
+        router.push("/pending");
+        router.refresh();
+        return;
+      }
+
+      // Preserve safe redirects from the original login page.
+      const params = new URLSearchParams(
+        window.location.search
+      );
+
       const requestedPath = params.get("next");
 
       const destination =
@@ -58,13 +94,21 @@ export default function LoginPage() {
           <div className="mb-3 text-sm font-semibold uppercase tracking-widest text-cyan-400">
             Surgical Navigation
           </div>
-          <h1 className="text-3xl font-bold">Welcome Back</h1>
+
+          <h1 className="text-3xl font-bold">
+            Welcome Back
+          </h1>
+
           <p className="mt-3 text-sm text-slate-400">
-            Sign in to manage your surgical navigation cases.
+            Sign in to access your surgical navigation
+            cases.
           </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form
+          onSubmit={handleLogin}
+          className="space-y-5"
+        >
           <div>
             <label
               htmlFor="email"
@@ -72,13 +116,16 @@ export default function LoginPage() {
             >
               Email Address
             </label>
+
             <input
               id="email"
               type="email"
               autoComplete="email"
               required
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) =>
+                setEmail(event.target.value)
+              }
               placeholder="Enter your email"
               className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none focus:border-cyan-400"
             />
@@ -91,13 +138,16 @@ export default function LoginPage() {
             >
               Password
             </label>
+
             <input
               id="password"
               type="password"
               autoComplete="current-password"
               required
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) =>
+                setPassword(event.target.value)
+              }
               placeholder="Enter your password"
               className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none focus:border-cyan-400"
             />
@@ -121,8 +171,21 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <div className="mt-6 text-center">
+          <p className="text-sm text-slate-400">
+            Don't have an account?{" "}
+            <Link
+              href="/register"
+              className="font-semibold text-cyan-400 hover:text-cyan-300"
+            >
+              Request an Account
+            </Link>
+          </p>
+        </div>
+
         <p className="mt-6 text-center text-xs text-slate-500">
-          SNCT • Educational demonstration using simulated case data
+          SNCT • Educational demonstration using
+          simulated case data
         </p>
       </div>
     </main>

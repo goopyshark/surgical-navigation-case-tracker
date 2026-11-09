@@ -20,9 +20,13 @@ export async function requireAdmin() {
   }
 
   const adminUserId = process.env.SUPABASE_ADMIN_USER_ID;
+  const instructorUserId =
+    process.env.SUPABASE_INSTRUCTOR_USER_ID;
 
   if (!adminUserId) {
-    console.error("SUPABASE_ADMIN_USER_ID is not configured.");
+    console.error(
+      "SUPABASE_ADMIN_USER_ID is not configured."
+    );
 
     return {
       authorized: false as const,
@@ -31,7 +35,15 @@ export async function requireAdmin() {
     };
   }
 
-  if (user.id !== adminUserId) {
+  const authorizedUserIds = [
+    adminUserId,
+    instructorUserId,
+  ].filter(
+    (id): id is string =>
+      typeof id === "string" && id.trim().length > 0
+  );
+
+  if (!authorizedUserIds.includes(user.id)) {
     return {
       authorized: false as const,
       status: 403,

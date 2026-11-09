@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAuthServer } from "../../lib/supabaseAuthServer";
 import { getSupabaseServer } from "../../lib/supabaseServer";
+import { requireRole } from "../../lib/requireRole";
 
 export const dynamic = "force-dynamic";
 
@@ -17,25 +17,23 @@ const ACTIVITY_LIMIT = 100;
 // Optional filter: ?action=CREATED, UPDATED, or DELETED.
 export async function GET(request: NextRequest) {
   try {
-    // Verify that the user is authenticated.
-    const auth = await getSupabaseAuthServer();
+    // Only approved users can view activity history.
+    const access = await requireRole([
+      "administrator",
+      "editor",
+      "viewer",
+    ]);
 
-    const {
-      data: { user },
-      error: authError,
-    } = await auth.auth.getUser();
-
-    if (authError || !user) {
+    if (!access.authorized) {
       return NextResponse.json(
-        { error: "Unauthorized. Please sign in." },
-        { status: 401 }
+        { error: access.message },
+        { status: access.status }
       );
     }
 
-    // Read the optional activity filter.
+    // Read the optional action filter.
     const action = request.nextUrl.searchParams.get("action");
 
-    // Reject unsupported filter values.
     if (
       action !== null &&
       !ALLOWED_ACTIONS.some(
@@ -51,7 +49,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Connect to Supabase.
+    // Retrieve activity records from Supabase.
     const supabase = getSupabaseServer();
 
     let query = supabase
@@ -60,14 +58,12 @@ export async function GET(request: NextRequest) {
         "id, case_id, case_name, action, description, performed_at"
       );
 
-    // Apply filtering directly in the database.
+    // Apply filtering at the database level.
     if (action !== null) {
       query = query.eq("action", action);
     }
 
-    // Retrieve the most recent matching activities.
-    // Use ID as a secondary sort for consistent ordering
-    // when timestamps are identical.
+    // Return the most recent matching activities.
     const { data, error } = await query
       .order("performed_at", { ascending: false })
       .order("id", { ascending: false })

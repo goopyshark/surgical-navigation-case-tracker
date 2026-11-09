@@ -1,30 +1,27 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServer } from "../../lib/supabaseServer";
-import { getSupabaseAuthServer } from "../../lib/supabaseAuthServer";
-import { requireAdmin } from "../../lib/requireAdmin";
+import { requireRole } from "../../lib/requireRole";
 
 export const dynamic = "force-dynamic";
 
 // GET - Retrieve all surgical cases
 export async function GET() {
   try {
-    // Verify that the user is authenticated.
-    const auth = await getSupabaseAuthServer();
+    // Only approved users can view cases.
+    const access = await requireRole([
+      "administrator",
+      "editor",
+      "viewer",
+    ]);
 
-    const {
-      data: { user },
-      error: authError,
-    } = await auth.auth.getUser();
-
-    if (authError || !user) {
+    if (!access.authorized) {
       return NextResponse.json(
-        { error: "Unauthorized. Please sign in." },
-        { status: 401 }
+        { error: access.message },
+        { status: access.status }
       );
     }
 
-    // Retrieve surgical cases from Supabase.
     const supabase = getSupabaseServer();
 
     const { data, error } = await supabase
@@ -62,17 +59,19 @@ export async function GET() {
 // POST - Create a new surgical case
 export async function POST(request: Request) {
   try {
-    // Only the configured administrator may create cases.
-    const admin = await requireAdmin();
+    // Administrators and editors can create cases.
+    const access = await requireRole([
+      "administrator",
+      "editor",
+    ]);
 
-    if (!admin.authorized) {
+    if (!access.authorized) {
       return NextResponse.json(
-        { error: admin.message },
-        { status: admin.status }
+        { error: access.message },
+        { status: access.status }
       );
     }
 
-    // Read the incoming request.
     const body: unknown = await request.json();
 
     if (
@@ -111,9 +110,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // WEEK 8: Improved duration validation.
     // Duration must be a positive whole number.
-    // No arbitrary maximum duration is imposed.
+    // No arbitrary maximum duration.
     const durationInput = input.duration;
 
     const duration =
@@ -128,8 +126,7 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error:
-            "Duration must be a positive whole number.",
+          error: "Duration must be a positive whole number.",
         },
         { status: 400 }
       );
@@ -160,7 +157,7 @@ export async function POST(request: Request) {
         : "";
     };
 
-    // Validate optional accuracy value.
+    // Validate optional accuracy.
     const accuracyInput = optionalText("accuracy");
 
     const accuracy =
@@ -174,17 +171,15 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error:
-            "Accuracy must be a non-negative number.",
+          error: "Accuracy must be a non-negative number.",
         },
         { status: 400 }
       );
     }
 
-    // Connect to Supabase.
     const supabase = getSupabaseServer();
 
-    // Insert the surgical case.
+    // Insert the new surgical case.
     const { data, error } = await supabase
       .from("surgical_cases")
       .insert({
@@ -220,7 +215,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // WEEK 6: Record case creation in Activity History.
+    // Record the case creation in Activity History.
     const { error: activityError } = await supabase
       .from("case_activity_log")
       .insert({
@@ -238,7 +233,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Return the created case.
     return NextResponse.json(
       {
         case: data,
@@ -249,7 +243,6 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Create case API error:", error);
 
-    // Handle malformed JSON requests.
     if (error instanceof SyntaxError) {
       return NextResponse.json(
         { error: "Invalid JSON request." },

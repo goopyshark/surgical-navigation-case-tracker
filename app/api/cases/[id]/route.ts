@@ -1,8 +1,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServer } from "../../../lib/supabaseServer";
-import { getSupabaseAuthServer } from "../../../lib/supabaseAuthServer";
-import { requireAdmin } from "../../../lib/requireAdmin";
+import { requireRole } from "../../../lib/requireRole";
 
 export const dynamic = "force-dynamic";
 
@@ -10,24 +9,22 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-// GET - Load one surgical case
+// GET - Retrieve an individual surgical case.
 export async function GET(
   _request: Request,
   context: RouteContext
 ) {
   try {
-    // Verify authentication.
-    const auth = await getSupabaseAuthServer();
+    const access = await requireRole([
+      "administrator",
+      "editor",
+      "viewer",
+    ]);
 
-    const {
-      data: { user },
-      error: authError,
-    } = await auth.auth.getUser();
-
-    if (authError || !user) {
+    if (!access.authorized) {
       return NextResponse.json(
-        { error: "Unauthorized. Please sign in." },
-        { status: 401 }
+        { error: access.message },
+        { status: access.status }
       );
     }
 
@@ -40,7 +37,6 @@ export async function GET(
       );
     }
 
-    // Retrieve the requested case.
     const supabase = getSupabaseServer();
 
     const { data, error } = await supabase
@@ -79,19 +75,22 @@ export async function GET(
   }
 }
 
-// PATCH - Update an existing surgical case
+// PATCH - Update an existing surgical case.
 export async function PATCH(
   request: Request,
   context: RouteContext
 ) {
   try {
-    // Only the configured administrator may update cases.
-    const admin = await requireAdmin();
+    // Administrators and editors can update cases.
+    const access = await requireRole([
+      "administrator",
+      "editor",
+    ]);
 
-    if (!admin.authorized) {
+    if (!access.authorized) {
       return NextResponse.json(
-        { error: admin.message },
-        { status: admin.status }
+        { error: access.message },
+        { status: access.status }
       );
     }
 
@@ -104,7 +103,6 @@ export async function PATCH(
       );
     }
 
-    // Parse request JSON.
     let body: unknown;
 
     try {
@@ -152,7 +150,7 @@ export async function PATCH(
       }
     }
 
-    // WEEK 8: Consistent duration validation.
+    // Duration must be a positive whole number.
     // No arbitrary maximum duration.
     const durationInput = input.duration;
 
@@ -190,7 +188,7 @@ export async function PATCH(
       );
     }
 
-    // Normalize optional fields.
+    // Normalize optional text fields.
     const optionalText = (field: string) => {
       const value = input[field];
 
@@ -199,7 +197,7 @@ export async function PATCH(
         : "";
     };
 
-    // Validate accuracy.
+    // Validate optional accuracy.
     const accuracyText = optionalText("accuracy");
 
     const accuracy =
@@ -219,9 +217,9 @@ export async function PATCH(
       );
     }
 
-    // Update the case in Supabase.
     const supabase = getSupabaseServer();
 
+    // Update the surgical case.
     const { data, error } = await supabase
       .from("surgical_cases")
       .update({
@@ -265,7 +263,7 @@ export async function PATCH(
       );
     }
 
-    // Record successful updates in Activity History.
+    // Record the update in Activity History.
     const { error: activityError } = await supabase
       .from("case_activity_log")
       .insert({
@@ -297,19 +295,21 @@ export async function PATCH(
   }
 }
 
-// DELETE - Permanently delete a surgical case
+// DELETE - Permanently delete a surgical case.
 export async function DELETE(
   _request: Request,
   context: RouteContext
 ) {
   try {
-    // Only the configured administrator may delete cases.
-    const admin = await requireAdmin();
+    // Only administrators can delete cases.
+    const access = await requireRole([
+      "administrator",
+    ]);
 
-    if (!admin.authorized) {
+    if (!access.authorized) {
       return NextResponse.json(
-        { error: admin.message },
-        { status: admin.status }
+        { error: access.message },
+        { status: access.status }
       );
     }
 
@@ -324,7 +324,8 @@ export async function DELETE(
 
     const supabase = getSupabaseServer();
 
-    // Delete the case and retrieve its name for logging.
+    // Delete the case and retrieve its information
+    // for the activity log.
     const { data, error } = await supabase
       .from("surgical_cases")
       .delete()
@@ -351,7 +352,7 @@ export async function DELETE(
       );
     }
 
-    // Preserve deletion history in the activity log.
+    // Preserve deletion history.
     const { error: activityError } = await supabase
       .from("case_activity_log")
       .insert({
